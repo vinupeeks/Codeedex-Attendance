@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const { ObjectId } = mongoose.Types;
 const Employee = require('../models/Employee');
 const Designation = require('../models/Designation');
+const Sequence = require('../models/Sequence');
 
 // Create a new employee
 const createEmployee = async (req, res) => {
@@ -24,10 +25,23 @@ const createEmployee = async (req, res) => {
         }
         const hashedPassword = await bcrypt.hash(password, 10);
 
+        const sequenceValue = await Sequence.findOne({ sequenceName: 'EmployeeCode' });
+        if (!sequenceValue) {
+            await Sequence.create({ sequenceName: 'EmployeeCode', sequenceValue: 99 });
+        }
+
+        const sequence = await Sequence.findOneAndUpdate(
+            { sequenceName: 'EmployeeCode' },
+            { $inc: { sequenceValue: 1 } },
+            { new: true, upsert: true }
+        );
+
+
+        const EmployeeCode = `CT${sequence.sequenceValue}`;
         const newEmployee = new Employee({
             name,
             password: hashedPassword,
-            employeeCode,
+            employeeCode: EmployeeCode,
             designation,
             email,
             username,
@@ -49,7 +63,7 @@ const createEmployee = async (req, res) => {
 const getEmployees = async (req, res) => {
     try {
         const employees = await Employee.find()
-            .select('name designation email username workMode')
+            .select('name designation email username workMode employeeCode')
             .populate('designation', 'title');
 
         if (!employees || employees.length === 0) {

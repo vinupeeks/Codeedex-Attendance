@@ -112,7 +112,7 @@ const updateDesignation = async (req, res) => {
                 }
             }
         ]);
-        console.log(`Updated Designation:`, updatedDesignation);
+        // console.log(`Updated Designation:`, updatedDesignation);
         res.json({ message: 'Designation updated successfully', designation: updatedDesignation[0] });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -130,7 +130,7 @@ const deleteDesignation = async (req, res) => {
             return res.status(404).json({ message: 'Designation not found' });
         }
         await Designation.findByIdAndDelete(designationId);
-        
+
         res.json({
             message: 'Designation deleted successfully',
             deletedDesignation: {
