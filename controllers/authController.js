@@ -1,5 +1,7 @@
-const User = require('../models/Employee.js');
+
 const jwt = require('jsonwebtoken');
+const Employee = require('../models/Employee');
+const bcryptjs = require('bcryptjs');
 
 // Register a user
 exports.registerUser = async (req, res) => {
@@ -33,18 +35,22 @@ exports.loginUser = async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        const user = await User.findOne({ email });
+        const user = await Employee.findOne({ email });
         if (!user) {
-            return res.status(401).json({ message: 'Email not found' });
+            return res.status(401).json({ message: 'Invalid e-mail id' });
         }
 
         const isPasswordCorrect = await user.matchPassword(password);
         if (!isPasswordCorrect) {
-            return res.status(401).json({ message: 'Invalid password' });
+            return res.status(401).json({ message: 'Invalid email or password' });
         }
 
         const token = jwt.sign(
-            { id: user._id, isAdmin: user.isAdmin, username: user.username },
+            {
+                id: user._id,
+                role: user.role === 'admin' ? 'admin' : 'employee', // Set role dynamically
+                username: user.username
+            },
             process.env.JWT_SECRET,
             { expiresIn: '1d' }
         );

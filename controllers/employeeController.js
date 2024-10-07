@@ -4,6 +4,7 @@ const { ObjectId } = mongoose.Types;
 const Employee = require('../models/Employee');
 const Designation = require('../models/Designation');
 const Sequence = require('../models/Sequence');
+const bcryptjs = require('bcryptjs');
 
 // Create a new employee
 const createEmployee = async (req, res) => {
@@ -23,7 +24,6 @@ const createEmployee = async (req, res) => {
         if (existingUserName) {
             return res.status(400).json({ message: 'User Name already used..!' });
         }
-        const hashedPassword = await bcrypt.hash(password, 10);
 
         const sequenceValue = await Sequence.findOne({ sequenceName: 'EmployeeCode' });
         if (!sequenceValue) {
@@ -40,7 +40,7 @@ const createEmployee = async (req, res) => {
         const EmployeeCode = `CT${sequence.sequenceValue}`;
         const newEmployee = new Employee({
             name,
-            password: hashedPassword,
+            password,
             employeeCode: EmployeeCode,
             designation,
             email,
