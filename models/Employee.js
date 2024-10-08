@@ -8,7 +8,6 @@ const employeeSchema = new mongoose.Schema({
     designation: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Designation',
-        required: true,
     },
     email: { type: String, required: true, unique: true },
     username: { type: String, required: true, unique: true, },

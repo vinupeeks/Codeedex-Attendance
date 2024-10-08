@@ -4,7 +4,6 @@ const { ObjectId } = mongoose.Types;
 const Employee = require('../models/Employee');
 const Designation = require('../models/Designation');
 const Sequence = require('../models/Sequence');
-const bcryptjs = require('bcryptjs');
 
 // Create a new employee
 const createEmployee = async (req, res) => {
@@ -25,9 +24,19 @@ const createEmployee = async (req, res) => {
             return res.status(400).json({ message: 'User Name already used..!' });
         }
 
-        const sequenceValue = await Sequence.findOne({ sequenceName: 'EmployeeCode' });
-        if (!sequenceValue) {
-            await Sequence.create({ sequenceName: 'EmployeeCode', sequenceValue: 99 });
+        const NoEmplyFound = await Employee.findOne({});
+        if (!NoEmplyFound) {
+            const NoSequenceFound = await Sequence.findOne({ sequenceName: 'EmployeeCode' });
+            if (!NoSequenceFound) {
+                console.log(`no sequence found`);
+                await Sequence.create({ sequenceName: 'EmployeeCode', sequenceValue: 99 });
+            }
+            // console.log(`Sequence found and need to update,,!`);
+            const updatedSequence = await Sequence.findOneAndUpdate(
+                { sequenceName: 'EmployeeCode' },
+                { sequenceValue: 99 },
+                { new: true }
+            );
         }
 
         const sequence = await Sequence.findOneAndUpdate(
@@ -189,6 +198,7 @@ const deleteEmployee = async (req, res) => {
         return res.status(404).json({ message: 'Employee not found' });
     }
     try {
+
         const employeeDetails = await Employee.findByIdAndDelete(id).populate('designation');
         res.json({
             message: 'Employee deleted successfully',
@@ -197,11 +207,13 @@ const deleteEmployee = async (req, res) => {
                 name: employeeDetails.name,
                 email: employeeDetails.email,
                 username: employeeDetails.username,
-                designation: {
-                    id: employeeDetails.designation._id,
-                    title: employeeDetails.designation.title,
-                    description: employeeDetails.designation.description,
-                }
+                ...(employeeDetails.designation && {
+                    designation: {
+                        id: employeeDetails.designation._id,
+                        title: employeeDetails.designation.title,
+                        description: employeeDetails.designation.description,
+                    }
+                })
             }
         });
     } catch (error) {

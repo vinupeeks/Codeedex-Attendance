@@ -1,4 +1,3 @@
-// controllers/designationController.js
 const mongoose = require('mongoose');
 const Designation = require('../models/Designation');
 const { ObjectId } = mongoose.Types;
