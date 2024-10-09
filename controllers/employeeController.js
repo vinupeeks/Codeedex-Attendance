@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const { ObjectId } = mongoose.Types;
 const Employee = require('../models/Employee');
 const Designation = require('../models/Designation');
-const Sequence = require('../models/Sequence');
+const Sequence = require('../models/EmplySequence');
 
 // Create a new employee
 const createEmployee = async (req, res) => {
@@ -11,6 +11,7 @@ const createEmployee = async (req, res) => {
 
     try {
         // Hash the password
+        // const email = email.toLowerCase();
         const existingUser = await Employee.findOne({ email });
         if (existingUser) {
             return res.status(400).json({ message: 'Email already exists' });
@@ -28,7 +29,7 @@ const createEmployee = async (req, res) => {
         if (!NoEmplyFound) {
             const NoSequenceFound = await Sequence.findOne({ sequenceName: 'EmployeeCode' });
             if (!NoSequenceFound) {
-                console.log(`no sequence found`);
+                // console.log(`no sequence found`);
                 await Sequence.create({ sequenceName: 'EmployeeCode', sequenceValue: 99 });
             }
             // console.log(`Sequence found and need to update,,!`);
@@ -108,7 +109,6 @@ const updateEmployee = async (req, res) => {
     const { id } = req.params;
     const { name, email, username, password, designation, teamLead, workMode, role } = req.body;
     // console.log(name)
-
     if (!ObjectId.isValid(id)) {
         return res.status(400).json({ message: 'Invalid employee ID' });
     }
@@ -119,20 +119,26 @@ const updateEmployee = async (req, res) => {
         }
     }
 
-    const existingUserName = await Employee.findOne({ username });
-    if (existingUserName) {
-        return res.status(400).json({ message: 'User Name already used..!' });
-    }
-
     if (designation) {
         const existingUserDesignation = await Designation.findOne({ _id: designation });
         if (!existingUserDesignation) {
-            console.log(existingUserDesignation)
+            // console.log(existingUserDesignation)
             return res.status(400).json({ message: 'Designation Not Found..!' });
         }
     }
 
     try {
+        const existingUser = await Employee.findById(id);
+        if (!existingUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        if (username !== existingUser.username) {
+            const existingUserName = await Employee.findOne({ username });
+            if (existingUserName) {
+                return res.status(400).json({ message: 'Username is already used by another user' });
+            }
+        }
+        
         const updateData = {};
 
         if (name) updateData.name = name;

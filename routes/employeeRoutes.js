@@ -1,15 +1,19 @@
 const express = require('express');
 const { createEmployee, getEmployees, getEmployeeById, updateEmployee, deleteEmployee } = require('../controllers/employeeController');
+const { protect, admin } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.route('/')
-    .get(getEmployees)          // Get all employees
-    .post(createEmployee);      // Create new employee
-
-router.route('/:id')
-    .get(getEmployeeById)      // Get employee by ID
-    .put(updateEmployee)       // Update employee by ID
-    .delete(deleteEmployee);   // Delete employee by ID
+router.get('/', getEmployees);
+router.post('/', createEmployee);
+router.get('/:id', getEmployeeById);
+router.put('/:id', updateEmployee);
+router.delete('/:id', deleteEmployee);
 
 module.exports = router;
+
+// router.get('/', protect, admin, getEmployees);
+// router.post('/', protect, admin, createEmployee);
+// router.get('/:id', protect, admin, getEmployeeById);
+// router.put('/:id', protect, admin, updateEmployee);
+// router.delete('/:id', protect, admin, deleteEmployee); 
