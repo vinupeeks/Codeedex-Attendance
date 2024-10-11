@@ -112,22 +112,23 @@ const updateEmployee = async (req, res) => {
     if (!ObjectId.isValid(id)) {
         return res.status(400).json({ message: 'Invalid employee ID' });
     }
-    if (email) {
-        const existingUserEmail = await Employee.findOne({ email, _id: { $ne: id } });
-        if (existingUserEmail) {
-            return res.status(400).json({ message: 'Email already exists' });
-        }
-    }
-
-    if (designation) {
-        const existingUserDesignation = await Designation.findOne({ _id: designation });
-        if (!existingUserDesignation) {
-            // console.log(existingUserDesignation)
-            return res.status(400).json({ message: 'Designation Not Found..!' });
-        }
-    }
 
     try {
+        if (email) {
+            const existingUserEmail = await Employee.findOne({ email, _id: { $ne: id } });
+            if (existingUserEmail) {
+                return res.status(400).json({ message: 'Email already exists' });
+            }
+        }
+
+        if (designation) {
+            const existingUserDesignation = await Designation.findOne({ _id: designation });
+            if (!existingUserDesignation) {
+                // console.log(existingUserDesignation)
+                return res.status(400).json({ message: 'Designation Not Found..!' });
+            }
+        }
+
         const existingUser = await Employee.findById(id);
         if (!existingUser) {
             return res.status(404).json({ message: 'User not found' });
@@ -138,7 +139,7 @@ const updateEmployee = async (req, res) => {
                 return res.status(400).json({ message: 'Username is already used by another user' });
             }
         }
-        
+
         const updateData = {};
 
         if (name) updateData.name = name;

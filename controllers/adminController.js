@@ -121,12 +121,15 @@ const updateAdmin = async (req, res) => {
             }
             updateData.email = lowerEmail;
         }
-        if (username) {
-            const existingUsername = await Admin.findOne({ username, _id: { $ne: id } });
-            if (existingUsername) {
-                return res.status(400).json({ message: 'Username already exists' });
+        const existingUser = await Admin.findById(id);
+        if (!existingUser) {
+            return res.status(404).json({ message: 'Admin not found' });
+        }
+        if (username !== existingUser.username) {
+            const existingUserName = await Admin.findOne({ username });
+            if (existingUserName) {
+                return res.status(400).json({ message: 'Username is already used by another Admin' });
             }
-            updateData.username = username;
         }
         if (password) {
             const salt = await bcrypt.genSalt(10);
