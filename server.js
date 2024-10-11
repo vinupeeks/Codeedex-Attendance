@@ -16,11 +16,11 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-app.use('/api/users', UserRoutes);
-app.use('/api/Designation', DesignationRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/admin-works', adminWorksRoutes);
+app.use('/users', UserRoutes);
+app.use('/Designation', DesignationRoutes);
+app.use('/auth', authRoutes);
+app.use('/admin', adminRoutes);
+app.use('/admin-works', adminWorksRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

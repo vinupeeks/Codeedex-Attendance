@@ -148,7 +148,7 @@ const updateAdmin = async (req, res) => {
                 id: admin._id,
                 fullName: admin.fullName,
                 email: admin.email,
-                username: admin.username,
+                username: username,
                 adminCode: admin.adminCode,
                 address: admin.address,
             }
