@@ -132,19 +132,20 @@ exports.editWork = async (req, res) => {
         work.designation = designation || work.designation;
         work.deadline = deadline || work.deadline;
 
-        // Validate that admin is not changing employee statuses
         if (assignedTo && Array.isArray(assignedTo)) {
             const originalAssignedTo = work.assignedTo.map(emp => emp.employee.toString());
+            const newAssignedTo = assignedTo.map(emp => emp.employee); 
 
-            assignedTo.forEach(assigned => {
-                if (!originalAssignedTo.includes(assigned.employee)) {
-                    work.assignedTo.push({
-                        employee: assigned.employee,
-                        status: 'pending'
-                    });
-                }
-            });
+            const retainedEmployees = work.assignedTo.filter(emp => newAssignedTo.includes(emp.employee.toString()));
+
+            const newEmployees = assignedTo.filter(emp => !originalAssignedTo.includes(emp.employee)).map(emp => ({
+                employee: emp.employee,
+                status: 'pending'
+            }));
+
+            work.assignedTo = [...retainedEmployees, ...newEmployees];
         }
+
         if (status) {
             if (['pending', 'in-progress', 'completed'].includes(status)) {
                 work.status = status;
@@ -163,12 +164,14 @@ exports.editWork = async (req, res) => {
                 select: 'username email employeeCode',
                 populate: { path: 'designation', select: 'title' }
             });
+
         res.status(200).json({ message: 'Work updated successfully', work: populatedWork });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error', error });
     }
 };
+
 
 
 // Delete work

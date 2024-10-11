@@ -1,4 +1,3 @@
-// routes/adminWorksRoutes.js
 const express = require('express');
 const router = express.Router();
 const adminWorksController = require('../controllers/adminWorksController.js');

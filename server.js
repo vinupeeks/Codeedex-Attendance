@@ -5,6 +5,7 @@ const DesignationRoutes = require('./routes/designationRoutes.js');
 const authRoutes = require('./routes/authRoutes.js');
 const adminRoutes = require('./routes/adminRoutes.js');
 const adminWorksRoutes = require('./routes/adminWorksRoutes.js');
+const UserProfile = require('./routes/userProfileRoutes.js');
 const cors = require('cors');
 require('dotenv').config();
 
@@ -21,6 +22,7 @@ app.use('/users', UserRoutes);
 app.use('/Designation', DesignationRoutes);
 app.use('/admin', adminRoutes);
 app.use('/admin-works', adminWorksRoutes);
+app.use('/User-profile', UserProfile);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

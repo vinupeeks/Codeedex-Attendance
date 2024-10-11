@@ -3,7 +3,7 @@ const Employee = require('../models/Employee');
 const Admin = require('../models/Admin');
 
 const protect = async (req, res, next) => {
-    console.log(req.body);
+    // console.log(req.body);
     const token = req.headers.authorization && req.headers.authorization.startsWith('Bearer ')
         ? req.headers.authorization.split(' ')[1]
         : null;
@@ -23,7 +23,7 @@ const protect = async (req, res, next) => {
                 return res.status(404).json({ message: 'User not found / Unauthorized Access' });
             }
             req.user = user;
-            // console.log(user);
+            // console.log(`after auth: `, user);
             next();
         } catch (error) {
             // console.log('protect error');
