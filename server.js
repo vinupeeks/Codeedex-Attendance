@@ -16,9 +16,9 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
+app.use('/auth', authRoutes);
 app.use('/users', UserRoutes);
 app.use('/Designation', DesignationRoutes);
-app.use('/auth', authRoutes);
 app.use('/admin', adminRoutes);
 app.use('/admin-works', adminWorksRoutes);
 
