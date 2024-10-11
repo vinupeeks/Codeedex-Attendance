@@ -111,7 +111,7 @@ const loginUser = async (req, res) => {
         //     username: user.username,
 
         res.status(200).json({
-            token,
+            token, id: user._id
             // userDetails
         });
     } catch (error) {
@@ -130,7 +130,7 @@ const validateToken = async (req, res) => {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        res.status(200).json({decoded});
+        res.status(200).json({ decoded });
     } catch (error) {
         res.status(401).json({ isValid: false });
     }
