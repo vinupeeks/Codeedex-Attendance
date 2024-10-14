@@ -53,6 +53,7 @@ exports.getAllWorks = async (req, res) => {
         const works = await Work.find()
             .select('-createdAt -updatedAt')
             .populate('designation', 'title')
+            .populate('admin','email')
             .populate({
                 path: 'assignedTo.employee',
                 select: 'username email employeeCode designation',
