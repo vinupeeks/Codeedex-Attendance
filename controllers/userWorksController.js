@@ -5,36 +5,57 @@ const Work = require("../models/work");
 exports.getAssignedWorks = async (req, res) => {
     try {
         const userId = req.user._id;
+        // console.log(userId);
 
-        const assignedWorks = await Work.find({ assignedTo: userId }).populate('designation assignedTo');
-        res.status(200).json({ works: assignedWorks });
+        const assignedWorks = await Work.find({ 'assignedTo.employee': userId }, {
+            workName: 1,
+            deadline: 1,
+            // 'assignedTo.$': 1,
+            'assignedTo.status': 1,
+            designation: 1,
+            admin: 1
+        })
+            .populate('designation', 'title')
+            .populate('assignedTo.employee', 'name')
+            .populate('admin', 'username')
+            .exec();
+
+        const formattedWorks = assignedWorks.map(work => ({
+            workId: work._id,
+            workName: work.workName,
+            designation: work.designation.title,
+            status: work.assignedTo[0].status,
+            deadline: work.deadline,
+            admin: work.admin.username,
+        }));
+
+        res.status(200).json({ works: formattedWorks });
     } catch (error) {
+        console.error(error);
         res.status(500).json({ message: 'Server error', error });
     }
 };
 
 // Update work status
 exports.updateWorkStatus = async (req, res) => {
-    const { workId, employeeId, status } = req.body; // Assume these values come from the request body
+    const { workId, status } = req.body;
+    const employeeId = req.user._id;
+
     try {
-        // Validate status
         if (!['pending', 'in-progress', 'completed'].includes(status)) {
             return res.status(400).json({ message: 'Invalid status' });
         }
 
-        // Find the work document
         const work = await Work.findById(workId);
         if (!work) {
             return res.status(404).json({ message: 'Work not found' });
         }
 
-        // Find the employee in assignedTo array and update their status
-        const assignedEmployee = work.assignedTo.find(assignment => assignment.employee.toString() === employeeId);
+        const assignedEmployee = work.assignedTo.find(assignment => assignment.employee.toString() === employeeId.toString());
         if (!assignedEmployee) {
             return res.status(404).json({ message: 'Employee not assigned to this work' });
         }
 
-        // Update employee status
         assignedEmployee.status = status;
         await work.save();
 
@@ -60,5 +81,37 @@ exports.updateWorkStatus = async (req, res) => {
             message: 'Server Error',
             error: error.message
         });
+    }
+};
+
+
+exports.getWorkDetailsById = async (req, res) => {
+    try {
+        const { workId } = req.params;
+        // console.log("Work ID from request:", workId);
+
+        const workDetails = await Work.findById(workId)
+            .populate('designation', 'title')
+            .populate('assignedTo.employee', 'name')
+            .populate('admin', 'username')
+            .exec();
+
+        if (!workDetails) {
+            return res.status(404).json({ message: 'Work not found' });
+        }
+
+        const formattedWork = {
+            workId: workDetails._id,
+            workName: workDetails.workName,
+            designation: workDetails.designation.title,
+            status: workDetails.assignedTo[0].status,
+            deadline: workDetails.deadline,
+            admin: workDetails.admin.username,
+        };
+
+        res.status(200).json({ work: formattedWork });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
     }
 };
