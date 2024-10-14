@@ -39,6 +39,15 @@ exports.punchOut = async (req, res) => {
             return res.status(404).json({ message: 'No active attendance found.' });
         }
 
+        const currentBreak = attendance.breakTimes[attendance.breakTimes.length - 1];
+        if (currentBreak && currentBreak.breakStart && !currentBreak.breakEnd) {
+            currentBreak.breakEnd = new Date();
+
+            const breakDuration = Math.floor((new Date(currentBreak.breakEnd) - new Date(currentBreak.breakStart)) / (1000 * 60)); // in minutes
+            attendance.totalBreakTime += breakDuration;
+            currentBreak.time = breakDuration;
+        }
+
         // Update punch-out time and calculate total work time
         attendance.punchOut = new Date();
 
