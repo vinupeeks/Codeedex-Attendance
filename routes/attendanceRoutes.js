@@ -13,4 +13,10 @@ router.post('/end-break', protect, attendanceController.endBreak);
 
 router.get('/today', protect, attendanceController.getAttendance);
 
+router.get('/all', protect, attendanceController.getAllAttendance);
+
+router.post('/date', protect, attendanceController.getAttendanceByDate);
+
+router.post('/date-range', protect, attendanceController.getAttendanceByDateRange);
+
 module.exports = router;
