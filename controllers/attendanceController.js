@@ -145,7 +145,7 @@ exports.getAttendance = async (req, res) => {
 
         if (!attendance) {
             return res.status(404).json({ message: 'Attendance record not found.' });
-        }
+        } 
 
         let totalBreakTime = 0;
 
