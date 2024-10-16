@@ -124,8 +124,13 @@ const getAttendanceEditRequestByDetails = async (req, res) => {
 const getProceedAttendanceList = async (req, res) => {
 
     try {
-        const ProceedAttendanceList = await AttendanceEditRequest.find({ status: 'approved' });
-        // .select
+        const ProceedAttendanceList = await AttendanceEditRequest.find({ status: 'approved' })
+            .populate({
+                path: 'adminAction.reviewedBy',
+                select: 'username email',
+            })
+            .select(' status adminAction date totalWorkTime totalBreakTime')
+            .select('-createdAt -updatedAt');
 
         if (!ProceedAttendanceList || ProceedAttendanceList.length === 0) {
             return res.status(404).json({ message: 'No proceed Attendance found' });
@@ -141,8 +146,13 @@ const getProceedAttendanceList = async (req, res) => {
 const getRejectedAttendanceList = async (req, res) => {
 
     try {
-        const ProceedAttendanceList = await AttendanceEditRequest.find({ status: 'rejected' });
-        // .select
+        const ProceedAttendanceList = await AttendanceEditRequest.find({ status: 'rejected' })
+            .populate({
+                path: 'adminAction.reviewedBy',
+                select: 'username email',
+            })
+            .select(' status adminAction date totalWorkTime totalBreakTime')
+            .select('-createdAt -updatedAt');
 
         if (!ProceedAttendanceList || ProceedAttendanceList.length === 0) {
             return res.status(404).json({ message: 'No proceed Attendance found' });
