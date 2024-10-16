@@ -1,4 +1,5 @@
 const Attendance = require("../models/attendance");
+const AttendanceEditRequest = require("../models/AttendanceEditRequest");
 
 
 // Create Punch-In (Start Attendance)
@@ -59,10 +60,12 @@ exports.punchOut = async (req, res) => {
 
         const totalTime = Math.floor((punchOutTime - punchInTime) / (1000 * 60));
         attendance.totalWorkTime = totalTime - attendance.totalBreakTime;
+        console.log(attendance.totalWorkTime);
 
         if (attendance.totalWorkTime < 240) {
             attendance.status = 'Halfday';
         }
+        attendance.status = 'Fullday';
 
         await attendance.save();
         res.status(200).json(attendance);
@@ -145,7 +148,7 @@ exports.getAttendance = async (req, res) => {
 
         if (!attendance) {
             return res.status(404).json({ message: 'Attendance record not found.' });
-        } 
+        }
 
         let totalBreakTime = 0;
 
@@ -230,8 +233,9 @@ exports.getAttendanceByDate = async (req, res) => {
             totalWorkTime: attendance.totalWorkTime ? `${attendance.totalWorkTime}` : 'N/A',
             totalBreakTime: attendance.totalBreakTime ? `${attendance.totalBreakTime}` : 'N/A',
             status: attendance.status || 'N/A',
+            breakTime: attendance.breakTimes
         };
-        breakTime: attendance.breakTimes
+
 
         res.status(200).json(result);
     } catch (error) {
@@ -275,5 +279,60 @@ exports.getAttendanceByDateRange = async (req, res) => {
         res.status(200).json(result);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching attendance records', error });
+    }
+};
+
+exports.submitAttendanceEditRequest = async (req, res) => {
+    const { date, punchIn, punchOut, breakTime, totalWorkTime, totalBreakTime } = req.body;
+    const userId = req.user._id;
+    console.log(userId)
+
+    try {
+        // Create a new edit request
+        const editRequest = new AttendanceEditRequest({
+            userId,
+            date,
+            punchIn,
+            punchOut,
+            totalWorkTime,
+            totalBreakTime,
+            breakTime: breakTime.map(breakEntry => ({
+                breakStart: breakEntry.breakStart,
+                breakEnd: breakEntry.breakEnd,
+                time: breakEntry.time
+            })),
+            status: 'pending',
+            adminAction: {
+                reviewedBy: null,
+                reviewedAt: null,
+                reason: ''
+            }
+        })
+
+        await editRequest.save();
+
+        delete editRequest.createdAt;
+        delete editRequest.updatedAt;
+
+        res.status(200).json({ message: 'Attendance edit request submitted successfully', editRequest });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+exports.getAttendanceRequestsByUser = async (req, res) => {
+    const userId = req.user._id;
+
+    try {
+        const requests = await AttendanceEditRequest.find({ userId }).sort({ createdAt: -1 })
+            .select(' adminAction date totalWorkTime totalBreakTime')
+            .select('-createdAt -updatedAt');
+
+
+        res.json({ requests });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
