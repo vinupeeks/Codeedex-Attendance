@@ -37,7 +37,7 @@ const updateAttendanceByDate = async (req, res) => {
                 attendance.totalWorkTime = totalWorkTime - totalBreakTime;
                 // attendance.status = attendance.totalWorkTime < 240 ? 'Halfday' : 'Present';
             }
-            attendance.status = attendance.totalWorkTime < 240 ? "Halfday" : "Present";
+            attendance.status = attendance.totalWorkTime < 240 ? "Halfday" : "Fullday";
             editRequest.status = 'approved';
 
             editRequest.adminAction = { reviewedBy: adminId, reviewedAt: new Date(), reason: reason };
@@ -120,4 +120,39 @@ const getAttendanceEditRequestByDetails = async (req, res) => {
     }
 };
 
-module.exports = { updateAttendanceByDate, getAttendanceEditRequestByDetails, getAttendanceRequestList };
+
+const getProceedAttendanceList = async (req, res) => {
+
+    try {
+        const ProceedAttendanceList = await AttendanceEditRequest.find({ status: 'approved' });
+        // .select
+
+        if (!ProceedAttendanceList || ProceedAttendanceList.length === 0) {
+            return res.status(404).json({ message: 'No proceed Attendance found' });
+        }
+
+        res.status(200).json(ProceedAttendanceList);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error fetching proceed attendance List time', error: error.message });
+    }
+};
+
+const getRejectedAttendanceList = async (req, res) => {
+
+    try {
+        const ProceedAttendanceList = await AttendanceEditRequest.find({ status: 'rejected' });
+        // .select
+
+        if (!ProceedAttendanceList || ProceedAttendanceList.length === 0) {
+            return res.status(404).json({ message: 'No proceed Attendance found' });
+        }
+
+        res.status(200).json(ProceedAttendanceList);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error fetching proceed attendance List time', error: error.message });
+    }
+};
+
+module.exports = { updateAttendanceByDate, getAttendanceEditRequestByDetails, getAttendanceRequestList, getProceedAttendanceList, getRejectedAttendanceList };

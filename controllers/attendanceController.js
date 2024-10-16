@@ -314,7 +314,8 @@ exports.submitAttendanceEditRequest = async (req, res) => {
         delete editRequest.createdAt;
         delete editRequest.updatedAt;
 
-        res.status(200).json({ message: 'Attendance edit request submitted successfully', editRequest });
+        res.status(200).json({ message: 'Attendance edit request submitted successfully' });
+        // res.status(200).json({ message: 'Attendance edit request submitted successfully', editRequest });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error', error: error.message });
