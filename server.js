@@ -23,7 +23,6 @@ app.use(express.json());
 
 // Route
 app.use('/auth', authRoutes);
-
 // Admin Routes 
 app.use('/users', UserRoutes);
 app.use('/Designation', DesignationRoutes);
