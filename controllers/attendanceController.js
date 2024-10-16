@@ -326,7 +326,11 @@ exports.getAttendanceRequestsByUser = async (req, res) => {
 
     try {
         const requests = await AttendanceEditRequest.find({ userId }).sort({ createdAt: -1 })
-            .select(' adminAction date totalWorkTime totalBreakTime')
+            .populate({
+                path: 'adminAction.reviewedBy',
+                select: 'username email',
+            })
+            .select(' status adminAction date totalWorkTime totalBreakTime')
             .select('-createdAt -updatedAt');
 
 

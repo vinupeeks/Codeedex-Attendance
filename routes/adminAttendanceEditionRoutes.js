@@ -1,15 +1,13 @@
 const express = require('express');
-const { updateAttendanceByDate, handleAttendanceRequest, getAttendanceEditRequestByDetails, getAttendanceRequestList } = require('../controllers/adminAttendanceEditionController');
+const { updateAttendanceByDate, getAttendanceEditRequestByDetails, getAttendanceRequestList } = require('../controllers/adminAttendanceEditionController');
 const { protect, admin } = require('../middleware/authMiddleware');
 const router = express.Router();
 
 // Route to update attendance based on date (admin access only)
 router.put('/update', protect, admin, updateAttendanceByDate);
 
-router.post('/request', handleAttendanceRequest);
+router.get('/requests/list', protect, admin, getAttendanceRequestList);
 
-router.get('/requests/list', getAttendanceRequestList);
-
-router.post('/request/details', getAttendanceEditRequestByDetails);
+router.post('/request/details', protect, admin, getAttendanceEditRequestByDetails);
 
 module.exports = router;

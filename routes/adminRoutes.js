@@ -4,18 +4,14 @@ const { protect, admin } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.get('/', getAdmins);
-router.post('/', createAdmin);
+router.get('/', protect, admin, getAdmins);
 
-router.get('/:id', getAdminById);
-router.put('/:id', updateAdmin);
-router.delete('/:id', deleteAdmin);
+router.post('/', protect, admin, createAdmin);
+
+router.get('/:id', protect, admin, getAdminById);
+
+router.put('/:id', protect, admin, updateAdmin);
+
+router.delete('/:id', protect, admin, deleteAdmin);
 
 module.exports = router;
-
-// router.get('/', protect, admin, getAdmins);
-// router.post('/', protect, admin, createAdmin);
-
-// router.get('/:id', protect, admin, getAdminById);
-// router.put('/:id', protect, admin, updateAdmin);
-// router.delete('/:id', protect, admin, deleteAdmin); 

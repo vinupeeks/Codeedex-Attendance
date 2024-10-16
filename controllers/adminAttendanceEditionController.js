@@ -3,89 +3,60 @@ const AttendanceEditRequest = require("../models/AttendanceEditRequest");
 const Employee = require("../models/Employee");
 
 const updateAttendanceByDate = async (req, res) => {
-    const { userId, date, punchIn, punchOut, breakTime } = req.body;
+    const { userId, date, punchIn, punchOut, breakTime, requestId, action, adminId, reason } = req.body;
 
     if (!userId || !date || !punchIn || !punchOut || !breakTime) {
         return res.status(400).json({ message: 'All fields are required' });
     }
 
     try {
-        const attendance = await Attendance.findOne({ userId, date });
 
-        if (!attendance) {
-            return res.status(404).json({ message: 'Attendance not found for the given user and date' });
-        }
-
-        attendance.punchIn = punchIn;
-        attendance.punchOut = punchOut;
-        attendance.breakTimes = breakTime;
-
-        const totalBreakTime = breakTime.reduce((total, breakObj) => total + breakObj.time, 0);
-        attendance.totalBreakTime = totalBreakTime;
-
-        if (punchOut !== "Still Working") {
-            const punchInTime = new Date(punchIn);
-            const punchOutTime = new Date(punchOut);
-            const totalWorkTime = (punchOutTime - punchInTime) / (1000 * 60);
-            attendance.totalWorkTime = totalWorkTime - totalBreakTime;
-        }
-
-        attendance.status = attendance.totalWorkTime < 240 ? "Halfday" : "Present";
-
-        const updatedAttendance = await attendance.save();
-
-        res.json(updatedAttendance);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error', error: error.message });
-    }
-};
-
-const handleAttendanceRequest = async (req, res) => {
-    const { requestId, action, adminId, reason } = req.body; // action = 'approve' or 'reject'
-
-    try {
         const editRequest = await AttendanceEditRequest.findById(requestId);
-
         if (!editRequest) {
             return res.status(404).json({ message: 'Edit request not found' });
         }
 
-        // Approve the request
         if (action === 'approve') {
-            const attendance = await Attendance.findOne({ userId: editRequest.userId, date: editRequest.date });
-
+            // Find the attendance record for the user and date
+            const attendance = await Attendance.findOne({ userId, date });
             if (!attendance) {
-                return res.status(404).json({ message: 'Attendance record not found' });
+                return res.status(404).json({ message: 'Attendance not found for the given user and date' });
             }
 
-            // Update the attendance record with new data
-            attendance.punchIn = editRequest.punchIn;
-            attendance.punchOut = editRequest.punchOut;
-            attendance.breakTime = editRequest.breakTime;
-            const totalBreakTime = editRequest.breakTime.reduce((total, breakObj) => total + breakObj.time, 0);
+            attendance.punchIn = punchIn;
+            attendance.punchOut = punchOut;
+            attendance.breakTimes = breakTime;
+
+            const totalBreakTime = breakTime.reduce((total, breakObj) => total + breakObj.time, 0);
             attendance.totalBreakTime = totalBreakTime;
-            const totalWorkTime = (new Date(editRequest.punchOut) - new Date(editRequest.punchIn)) / (1000 * 60); // minutes
-            attendance.totalWorkTime = totalWorkTime - totalBreakTime;
-            attendance.status = totalWorkTime < 240 ? 'Halfday' : 'Present';
 
-            await attendance.save();
-
-            // Update the request status to approved
+            if (punchOut !== "Still Working") {
+                const punchInTime = new Date(punchIn);
+                const punchOutTime = new Date(punchOut);
+                const totalWorkTime = (punchOutTime - punchInTime) / (1000 * 60); // Calculate in minutes
+                attendance.totalWorkTime = totalWorkTime - totalBreakTime;
+                // attendance.status = attendance.totalWorkTime < 240 ? 'Halfday' : 'Present';
+            }
+            attendance.status = attendance.totalWorkTime < 240 ? "Halfday" : "Present";
             editRequest.status = 'approved';
-            editRequest.adminAction = { reviewedBy: adminId, reviewedAt: new Date() };
+
+            editRequest.adminAction = { reviewedBy: adminId, reviewedAt: new Date(), reason: reason };
+            await attendance.save();
             await editRequest.save();
 
-            return res.json({ message: 'Attendance request approved', attendance });
+            return res.json({
+                message: 'Attendance request approved',
+                attendance: attendance,
+                request: editRequest,
+            });
         }
-
-        // Reject the request
         if (action === 'reject') {
+            // Update the request with rejection reason and status
             editRequest.status = 'rejected';
             editRequest.adminAction = { reviewedBy: adminId, reviewedAt: new Date(), reason };
             await editRequest.save();
 
-            return res.json({ message: 'Attendance request rejected', reason });
+            return res.json({ message: 'Attendance request rejected', request: editRequest });
         }
 
         return res.status(400).json({ message: 'Invalid action' });
@@ -93,7 +64,7 @@ const handleAttendanceRequest = async (req, res) => {
         console.error(error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
-};
+}
 
 const getAttendanceRequestList = async (req, res) => {
 
@@ -149,4 +120,4 @@ const getAttendanceEditRequestByDetails = async (req, res) => {
     }
 };
 
-module.exports = { updateAttendanceByDate, handleAttendanceRequest, getAttendanceEditRequestByDetails, getAttendanceRequestList };
+module.exports = { updateAttendanceByDate, getAttendanceEditRequestByDetails, getAttendanceRequestList };

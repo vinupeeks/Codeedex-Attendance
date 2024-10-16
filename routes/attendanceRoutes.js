@@ -1,26 +1,26 @@
 const express = require('express');
 const router = express.Router();
 const attendanceController = require('../controllers/attendanceController.js');
-const { protect } = require('../middleware/authMiddleware.js');
+const { protect, employee } = require('../middleware/authMiddleware.js');
 
-router.post('/punch-in', protect, attendanceController.punchIn);
+router.post('/punch-in', protect, employee, attendanceController.punchIn);
 
-router.post('/punch-out', protect, attendanceController.punchOut);
+router.post('/punch-out', protect, employee, attendanceController.punchOut);
 
-router.post('/start-break', protect, attendanceController.startBreak);
+router.post('/start-break', protect, employee, attendanceController.startBreak);
 
-router.post('/end-break', protect, attendanceController.endBreak);
+router.post('/end-break', protect, employee, attendanceController.endBreak);
 
-router.get('/today', protect, attendanceController.getAttendance);
+router.get('/today', protect, employee, attendanceController.getAttendance);
 
-router.get('/all', protect, attendanceController.getAllAttendance);
+router.get('/all', protect, employee, attendanceController.getAllAttendance);
 
-router.post('/date', protect, attendanceController.getAttendanceByDate);
+router.post('/date', protect, employee, attendanceController.getAttendanceByDate);
 
-router.post('/date-range', protect, attendanceController.getAttendanceByDateRange);
+router.post('/date-range', protect, employee, attendanceController.getAttendanceByDateRange);
 
-router.post('/edit-request', protect, attendanceController.submitAttendanceEditRequest);
+router.post('/edit-request', protect, employee, attendanceController.submitAttendanceEditRequest);
 
-router.get('/requests', protect, attendanceController.getAttendanceRequestsByUser);
+router.get('/requests', protect, employee, attendanceController.getAttendanceRequestsByUser);
 
 module.exports = router;

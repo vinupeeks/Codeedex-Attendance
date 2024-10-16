@@ -46,7 +46,8 @@ exports.updateWorkStatus = async (req, res) => {
             return res.status(400).json({ message: 'Invalid status' });
         }
 
-        const work = await Work.findById(workId);
+        const work = await Work.findById(workId)
+            .select(`-createdAt -updatedAt`);
         if (!work) {
             return res.status(404).json({ message: 'Work not found' });
         }
@@ -89,7 +90,6 @@ exports.getWorkDetailsById = async (req, res) => {
     try {
         const { workId } = req.params;
         // console.log("Work ID from request:", workId);
-
         const workDetails = await Work.findById(workId)
             .populate('designation', 'title')
             .populate('assignedTo.employee', 'name')
