@@ -19,4 +19,8 @@ router.post('/date', protect, attendanceController.getAttendanceByDate);
 
 router.post('/date-range', protect, attendanceController.getAttendanceByDateRange);
 
+router.post('/edit-request', protect, attendanceController.submitAttendanceEditRequest);
+
+router.get('/requests', protect, attendanceController.getAttendanceRequestsByUser);
+
 module.exports = router;
