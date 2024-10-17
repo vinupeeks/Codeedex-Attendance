@@ -64,8 +64,9 @@ exports.punchOut = async (req, res) => {
 
         if (attendance.totalWorkTime < 240) {
             attendance.status = 'Halfday';
+        } else {
+            attendance.status = 'Fullday';
         }
-        attendance.status = 'Fullday';
 
         await attendance.save();
         res.status(200).json(attendance);

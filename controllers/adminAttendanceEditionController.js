@@ -1,6 +1,40 @@
 const Attendance = require("../models/attendance");
 const AttendanceEditRequest = require("../models/AttendanceEditRequest");
 const Employee = require("../models/Employee");
+const cron = require('node-cron');
+const moment = require('moment');
+
+cron.schedule('30 17 * * *', async () => {
+    try {
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const absentEmployees = await Employee.find({
+            _id: {
+                $nin: await Attendance.find({ date: today }).distinct('userId')
+            }
+        });
+
+        const bulkOperations = absentEmployees.map((employee) => ({
+            updateOne: {
+                filter: { userId: employee._id, date: today },
+                update: {
+                    $set: { status: 'Absent', punchIn: null, punchOut: null, totalWorkTime: 0 }
+                },
+                upsert: true,
+            }
+        }));
+
+        if (bulkOperations.length > 0) {
+            await Attendance.bulkWrite(bulkOperations);
+            console.log(`${absentEmployees.length} employees marked as absent.`);
+        } else {
+            console.log('No absent employees found.');
+        }
+    } catch (error) {
+        console.error('Error marking employees as absent:', error);
+    }
+});
 
 const updateAttendanceByDate = async (req, res) => {
     const { userId, date, punchIn, punchOut, breakTime, requestId, action, adminId, reason } = req.body;
@@ -165,4 +199,91 @@ const getRejectedAttendanceList = async (req, res) => {
     }
 };
 
-module.exports = { updateAttendanceByDate, getAttendanceEditRequestByDetails, getAttendanceRequestList, getProceedAttendanceList, getRejectedAttendanceList };
+const getTodayAttendance = async (req, res) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const attendanceList = await Attendance.find({
+            date: today.toISOString()
+        }).populate('userId', 'name')
+            .select(`date punchIn punchOut status`)
+            .select(`-createdAt -updatedAt`)
+
+        res.status(200).json({
+            success: true,
+            count: attendanceList.length,
+            data: attendanceList
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching today\'s attendance',
+            error: error.message
+        });
+    }
+};
+
+const getAttendanceByUserId = async (req, res) => {
+    try {
+        const employeeId = req.params.id;
+        const attendanceRecords = await Attendance.find({ userId: employeeId })
+            .populate('userId', 'name email role');
+
+        if (!attendanceRecords || attendanceRecords.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No attendance records found for this employee.'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            count: attendanceRecords.length,
+            data: attendanceRecords
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching attendance for the employee',
+            error: error.message
+        });
+    }
+};
+
+const getAttendanceByAttendanceId = async (req, res) => {
+    try {
+        const attendanceId = req.params.id;
+        const attendanceRecords = await Attendance.find({ _id: attendanceId })
+            .populate('userId', 'name email role');
+
+        if (!attendanceRecords || attendanceRecords.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No attendance records found for this employee.'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            count: attendanceRecords.length,
+            data: attendanceRecords
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching attendance for the employee',
+            error: error.message
+        });
+    }
+};
+module.exports = {
+    updateAttendanceByDate,
+    getAttendanceEditRequestByDetails,
+    getAttendanceRequestList,
+    getProceedAttendanceList,
+    getRejectedAttendanceList,
+    getTodayAttendance,
+    getAttendanceByUserId,
+    getAttendanceByAttendanceId
+};
