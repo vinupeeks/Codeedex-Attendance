@@ -277,6 +277,53 @@ const getAttendanceByAttendanceId = async (req, res) => {
         });
     }
 };
+const getAttendanceForCurrentMonth = async (req, res) => {
+    try {
+        const startOfMonth = moment().startOf('month').toDate();
+        const endOfMonth = moment().endOf('month').toDate();
+
+        const attendanceRecords = await Attendance.find({
+            date: { $gte: startOfMonth, $lte: endOfMonth }
+        })
+            .populate({
+                path: 'userId',
+                select: 'name email title designation',
+                populate: {
+                    path: 'designation',
+                    select: 'title'
+                }
+            })
+            .select(`date totalWorkTime totalBreakTime status`)
+            .sort({ date: -1 });
+
+        const formattedAttendance = attendanceRecords.map(record => ({
+            user: {
+                name: record.userId.name,
+                email: record.userId.email,
+                userId: record.userId._id,
+                username: record.userId.username,
+                designation: record.userId.designation ? record.userId.designation.title : null
+            },
+            date: record.date,
+            workId: record._id,
+            totalWorkTime: record.totalWorkTime,
+            totalBreakTime: record.totalBreakTime,
+            status: record.status
+        }));
+        res.status(200).json({
+            success: 'Attendance List fetched Succeced',
+            count: attendanceRecords.length,
+            data: formattedAttendance
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching attendance for the current month',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     updateAttendanceByDate,
     getAttendanceEditRequestByDetails,
@@ -285,5 +332,6 @@ module.exports = {
     getRejectedAttendanceList,
     getTodayAttendance,
     getAttendanceByUserId,
-    getAttendanceByAttendanceId
+    getAttendanceByAttendanceId,
+    getAttendanceForCurrentMonth
 };
