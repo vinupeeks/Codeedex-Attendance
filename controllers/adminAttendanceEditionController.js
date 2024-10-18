@@ -291,7 +291,7 @@ const getAttendanceForCurrentMonth = async (req, res) => {
         })
             .populate({
                 path: 'userId',
-                select: 'employeeCode email', // Populate only the code and email fields
+                select: 'employeeCode email username', // Populate only the code and email fields
             })
             .select(`date totalWorkTime totalBreakTime status`)
             .sort({ date: -1 });
@@ -300,6 +300,7 @@ const getAttendanceForCurrentMonth = async (req, res) => {
             if (record.userId) {
                 return {
                     user: {
+                        Name: record.userId.username,
                         EmpCode: record.userId.employeeCode,
                         email: record.userId.email,
                     },
@@ -311,6 +312,7 @@ const getAttendanceForCurrentMonth = async (req, res) => {
             } else {
                 return {
                     user: {
+                        Name: null,
                         EmpCode: null,
                         email: null,
                     },
@@ -414,16 +416,25 @@ const filterAttendance = async (req, res) => {
         }));
 
         // Send success response
+        if (formattedAttendance.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: 'No matched fields..!',
+                data: []
+            });
+        }
+
         res.status(200).json({
             success: true,
             count: formattedAttendance.length,
             data: formattedAttendance,
         });
+
     } catch (error) {
         // Handle errors
         res.status(500).json({
             success: false,
-            message: 'Error fetching attendance data',
+            message: 'Error fetching attendance data, Not matched fields..!',
             error: error.message,
         });
     }
