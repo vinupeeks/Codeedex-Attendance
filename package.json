@@ -19,7 +19,8 @@
     "jsonwebtoken": "^9.0.2",
     "moment": "^2.30.1",
     "mongoose": "^8.7.0",
-    "node-cron": "^3.0.3"
+    "node-cron": "^3.0.3",
+    "tz": "^0.1.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.7"

@@ -3,8 +3,9 @@ const AttendanceEditRequest = require("../models/AttendanceEditRequest");
 const Employee = require("../models/Employee");
 const cron = require('node-cron');
 const moment = require('moment');
+const tz = require('tz');
 
-cron.schedule('30 17 * * *', async () => {
+cron.schedule('54 10 * * *', async () => {
     try {
 
         const today = new Date();
@@ -34,6 +35,9 @@ cron.schedule('30 17 * * *', async () => {
     } catch (error) {
         console.error('Error marking employees as absent:', error);
     }
+}, {
+    scheduled: true,
+    timezone: "Asia/Kolkata"
 });
 
 const updateAttendanceByDate = async (req, res) => {
@@ -285,16 +289,17 @@ const getAttendanceForCurrentMonth = async (req, res) => {
         const attendanceRecords = await Attendance.find({
             date: { $gte: startOfMonth, $lte: endOfMonth }
         })
-            .populate({
-                path: 'userId',
-                select: 'name email title designation',
-                populate: {
-                    path: 'designation',
-                    select: 'title'
-                }
-            })
-            .select(`date totalWorkTime totalBreakTime status`)
-            .sort({ date: -1 });
+        // .populate({
+        // path: 'userId',
+        // select: 'email title designation',
+        // populate: {
+        // path: 'designation',
+        // select: 'title'
+        // }
+        // })
+        // .select(`date totalWorkTime totalBreakTime status`)
+        // .sort({ date: -1 });
+        console.log(attendanceRecords);
 
         const formattedAttendance = attendanceRecords.map(record => ({
             user: {
@@ -324,6 +329,100 @@ const getAttendanceForCurrentMonth = async (req, res) => {
     }
 };
 
+const filterAttendance = async (req, res) => {
+    const { employeeCode, workMode, month, Date } = req.body;
+
+    try {
+        let startDate, endDate;
+        // console.log(`employeeName: ${employeeName}, workMode: ${workMode}, month: ${month}, Date: ${Date}`);
+
+        // Handle specific date filtering (convert to UTC)
+        if (Date) {
+            startDate = moment.utc(Date).startOf('day').toDate();
+            endDate = moment.utc(Date).endOf('day').toDate();
+        } else {
+            // Default to last month's data if no date is provided (convert to UTC)
+            const lastMonth = moment.utc().subtract(1, 'month');
+            startDate = lastMonth.startOf('month').toDate();
+            endDate = lastMonth.endOf('month').toDate();
+        }
+
+        // If the user provides a month filter, adjust the date range accordingly
+        if (month) {
+            const year = moment().year(); // Use the current year
+            const monthIndex = parseInt(month) - 1; // Convert month to zero-based index
+            startDate = moment.utc().year(year).month(monthIndex).startOf('month').toDate();
+            endDate = moment.utc().year(year).month(monthIndex).endOf('month').toDate();
+        }
+
+
+        // Initialize the attendance query with the date range
+        const attendanceQuery = {
+            date: { $gte: startDate, $lte: endDate },
+        };
+
+        // Build the employee query based on the filters
+        const employeeQuery = {};
+
+        // Handle employee name filtering (case-insensitive)
+        if (employeeCode) {
+            employeeQuery.employeeCode = employeeCode; // Filter by employeeCode
+        }
+
+        // Handle workMode filtering
+        if (workMode) {
+            employeeQuery.workMode = workMode;
+        }
+
+        // console.log(employeeQuery);
+
+        // Fetch filtered employees based on the query
+        const filteredEmployees = await Employee.find(employeeQuery).select('_id');
+
+        // If employees are found, apply their IDs to the attendance query
+        if (filteredEmployees.length > 0) {
+            attendanceQuery.userId = { $in: filteredEmployees.map(emp => emp._id) };
+        }
+
+        console.log(attendanceQuery);
+        const attendanceRecords = await Attendance.find(attendanceQuery)
+            .populate({
+                path: 'userId',
+                select: 'name email workMode employeeCode',
+            })
+            .select('date totalWorkTime totalBreakTime status')
+            .sort({ date: -1 });
+
+        const formattedAttendance = attendanceRecords.map(record => ({
+            user: {
+                name: record.userId.name,
+                email: record.userId.email,
+                EmployeeCode: record.userId.employeeCode,
+                workMode: record.userId.workMode,
+            },
+            date: record.date,
+            totalWorkTime: record.totalWorkTime,
+            totalBreakTime: record.totalBreakTime,
+            status: record.status,
+        }));
+
+        // Send success response
+        res.status(200).json({
+            success: true,
+            count: formattedAttendance.length,
+            data: formattedAttendance,
+        });
+    } catch (error) {
+        // Handle errors
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching attendance data',
+            error: error.message,
+        });
+    }
+};
+
+
 module.exports = {
     updateAttendanceByDate,
     getAttendanceEditRequestByDetails,
@@ -333,5 +432,6 @@ module.exports = {
     getTodayAttendance,
     getAttendanceByUserId,
     getAttendanceByAttendanceId,
-    getAttendanceForCurrentMonth
+    getAttendanceForCurrentMonth,
+    filterAttendance
 };
