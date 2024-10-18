@@ -289,32 +289,39 @@ const getAttendanceForCurrentMonth = async (req, res) => {
         const attendanceRecords = await Attendance.find({
             date: { $gte: startOfMonth, $lte: endOfMonth }
         })
-        // .populate({
-        // path: 'userId',
-        // select: 'email title designation',
-        // populate: {
-        // path: 'designation',
-        // select: 'title'
-        // }
-        // })
-        // .select(`date totalWorkTime totalBreakTime status`)
-        // .sort({ date: -1 });
-        console.log(attendanceRecords);
+            .populate({
+                path: 'userId',
+                select: 'employeeCode email', // Populate only the code and email fields
+            })
+            .select(`date totalWorkTime totalBreakTime status`)
+            .sort({ date: -1 });
 
-        const formattedAttendance = attendanceRecords.map(record => ({
-            user: {
-                name: record.userId.name,
-                email: record.userId.email,
-                userId: record.userId._id,
-                username: record.userId.username,
-                designation: record.userId.designation ? record.userId.designation.title : null
-            },
-            date: record.date,
-            workId: record._id,
-            totalWorkTime: record.totalWorkTime,
-            totalBreakTime: record.totalBreakTime,
-            status: record.status
-        }));
+        const formattedAttendance = attendanceRecords.map(record => {
+            if (record.userId) {
+                return {
+                    user: {
+                        EmpCode: record.userId.employeeCode,
+                        email: record.userId.email,
+                    },
+                    date: record.date,
+                    totalWorkTime: record.totalWorkTime,
+                    totalBreakTime: record.totalBreakTime,
+                    status: record.status
+                };
+            } else {
+                return {
+                    user: {
+                        EmpCode: null,
+                        email: null,
+                    },
+                    date: record.date,
+                    totalWorkTime: record.totalWorkTime,
+                    totalBreakTime: record.totalBreakTime,
+                    status: record.status
+                };
+            }
+        });
+
         res.status(200).json({
             success: 'Attendance List fetched Succeced',
             count: attendanceRecords.length,
