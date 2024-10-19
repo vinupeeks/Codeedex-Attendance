@@ -8,8 +8,10 @@ const adminWorksRoutes = require('./routes/adminWorksRoutes.js');
 const UserProfile = require('./routes/userProfileRoutes.js');
 const UserWorks = require('./routes/userWorksRoutes.js');
 const AdminAttendance = require('./routes/adminAttendanceEditionRoutes.js');
-
 const attendanceRoutes = require('./routes/attendanceRoutes.js');
+
+const UserLeaves = require('./routes/leaveUserRoutes.js');
+const AdminLeaves = require('./routes/leaveAdminRoutes.js');
 
 const cors = require('cors');
 require('dotenv').config();
@@ -29,11 +31,13 @@ app.use('/Designation', DesignationRoutes);
 app.use('/admin', adminRoutes);
 app.use('/admin-works', adminWorksRoutes);
 app.use('/admin-attendance', AdminAttendance);
+app.use('/admin-leave', AdminLeaves);
 
 // User Routes
 app.use('/User-works', UserWorks);
 app.use('/User-profile', UserProfile);
 app.use('/attendance', attendanceRoutes);
+app.use('/leave', UserLeaves);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

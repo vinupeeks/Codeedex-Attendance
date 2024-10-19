@@ -14,13 +14,16 @@ router.get('/proceed-list', protect, admin, getProceedAttendanceList);
 
 router.get('/rejected-list', protect, admin, getRejectedAttendanceList);
 
-
-router.get('/list-today', protect, admin, getTodayAttendance);
-router.get('/user/:id', protect, admin, getAttendanceByUserId);
 router.get('/details/:id', protect, admin, getAttendanceByAttendanceId);
 
-
 router.get('/month', protect, admin, getAttendanceForCurrentMonth);
-router.post('/filter', filterAttendance);
+
+router.post('/filter', protect, admin, filterAttendance);
+
+router.get('/list-today', protect, admin, getTodayAttendance);
+
+router.get('/user/:id', protect, admin, getAttendanceByUserId);
+
+
 
 module.exports = router;

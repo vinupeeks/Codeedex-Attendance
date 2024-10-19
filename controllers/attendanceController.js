@@ -2,25 +2,39 @@ const Attendance = require("../models/attendance");
 const AttendanceEditRequest = require("../models/AttendanceEditRequest");
 
 
+const convertToIST = (date) => {
+    return new Date(date.getTime() + (5.5 * 60 * 60 * 1000));
+};
+
 // Create Punch-In (Start Attendance)
 exports.punchIn = async (req, res) => {
     const userId = req.user._id;
-    const today = new Date().setHours(0, 0, 0, 0);
+    const today = convertToIST(new Date()).toISOString().slice(0, 10);
+    const todayStart = new Date(today + "T00:00:00.000Z");
+    const todayEnd = new Date(today + "T23:59:59.999Z");
+
+    // console.log(today);
+
 
     try {
-        let attendanceCheck = await Attendance.findOne({ userId, date: today })
+        let attendanceCheck = await Attendance.find({
+            userId,
+            date: { $gte: todayStart, $lte: todayEnd }
+        })
             .select('-createdAt -updatedAt');
 
-        if (attendanceCheck) {
+
+        if (attendanceCheck.length > 0) {
             return res.status(400).json({ message: 'You have already punched in today.' });
         }
 
         const attendance = new Attendance({
             userId,
             date: today,
-            punchIn: new Date(),
+            punchIn: convertToIST(new Date()),
             status: 'Present'
         })
+
         await attendance.save();
 
         const attendanceResponse = attendance.toObject();
@@ -36,38 +50,47 @@ exports.punchIn = async (req, res) => {
 // Create Punch-Out (End Attendance)
 exports.punchOut = async (req, res) => {
     const userId = req.user._id;
-    const today = new Date().setHours(0, 0, 0, 0);
+    const today = convertToIST(new Date()).toISOString().slice(0, 10);
+    const todayStart = new Date(today + "T00:00:00.000Z");
+    const todayEnd = new Date(today + "T23:59:59.999Z");
 
     try {
-        const attendance = await Attendance.findOne({ userId, date: today })
+        const attendance = await Attendance.findOne({
+            userId, date: { $gte: todayStart, $lte: todayEnd }
+        })
             .select('-createdAt -updatedAt');
+        // console.log(attendance);
 
+        if (!attendance || attendance.punchOut) {
+            return res.status(404).json({ message: 'You are already PunchedOut' });
+        }
         if (!attendance || !attendance.punchIn) {
             return res.status(404).json({ message: 'No active attendance found.' });
         }
         const currentBreak = attendance.breakTimes[attendance.breakTimes.length - 1];
         if (currentBreak && currentBreak.breakStart && !currentBreak.breakEnd) {
-            currentBreak.breakEnd = new Date();
+            currentBreak.breakEnd = convertToIST(new Date());
 
             const breakDuration = Math.floor((new Date(currentBreak.breakEnd) - new Date(currentBreak.breakStart)) / (1000 * 60)); // in minutes
             attendance.totalBreakTime += breakDuration;
             currentBreak.time = breakDuration;
         }
 
-        attendance.punchOut = new Date();
+        attendance.punchOut = convertToIST(new Date());
         const punchInTime = new Date(attendance.punchIn);
         const punchOutTime = new Date(attendance.punchOut);
 
         const totalTime = Math.floor((punchOutTime - punchInTime) / (1000 * 60));
         attendance.totalWorkTime = totalTime - attendance.totalBreakTime;
-        console.log(attendance.totalWorkTime);
+        // console.log(attendance.totalWorkTime);
 
         if (attendance.totalWorkTime < 240) {
             attendance.status = 'Halfday';
         } else {
             attendance.status = 'Fullday';
         }
-
+        console.log(attendance);
+        
         await attendance.save();
         res.status(200).json(attendance);
     } catch (error) {
@@ -78,10 +101,14 @@ exports.punchOut = async (req, res) => {
 // Start Break
 exports.startBreak = async (req, res) => {
     const userId = req.user._id;
-    const today = new Date().setHours(0, 0, 0, 0);
+    const today = convertToIST(new Date()).toISOString().slice(0, 10);
+    const todayStart = new Date(today + "T00:00:00.000Z");
+    const todayEnd = new Date(today + "T23:59:59.999Z");
 
     try {
-        const attendance = await Attendance.findOne({ userId, date: today })
+        const attendance = await Attendance.findOne({
+            userId, date: { $gte: todayStart, $lte: todayEnd }
+        })
             .select('-createdAt -updatedAt');
 
         if (!attendance || !attendance.punchIn) {
@@ -97,7 +124,7 @@ exports.startBreak = async (req, res) => {
             return res.status(400).json({ message: 'A break is already ongoing. Please end the current break before starting a new one.' });
         }
 
-        attendance.breakTimes.push({ breakStart: new Date() });
+        attendance.breakTimes.push({ breakStart: convertToIST(new Date()) });
         await attendance.save();
 
         res.status(200).json(attendance);
@@ -109,10 +136,14 @@ exports.startBreak = async (req, res) => {
 // End Break
 exports.endBreak = async (req, res) => {
     const userId = req.user._id;
-    const today = new Date().setHours(0, 0, 0, 0);
+    const today = convertToIST(new Date()).toISOString().slice(0, 10);
+    const todayStart = new Date(today + "T00:00:00.000Z");
+    const todayEnd = new Date(today + "T23:59:59.999Z");
 
     try {
-        const attendance = await Attendance.findOne({ userId, date: today })
+        const attendance = await Attendance.findOne({
+            userId, date: { $gte: todayStart, $lte: todayEnd }
+        })
             .select('-createdAt -updatedAt');
 
         if (!attendance || !attendance.punchIn) {
@@ -125,7 +156,7 @@ exports.endBreak = async (req, res) => {
             return res.status(400).json({ message: 'No ongoing break found.' });
         }
 
-        currentBreak.breakEnd = new Date();
+        currentBreak.breakEnd = convertToIST(new Date());
 
         const breakDuration = Math.floor((new Date(currentBreak.breakEnd) - new Date(currentBreak.breakStart)) / (1000 * 60)); // in minutes
         attendance.totalBreakTime += breakDuration;
@@ -141,10 +172,14 @@ exports.endBreak = async (req, res) => {
 
 exports.getAttendance = async (req, res) => {
     const userId = req.user._id;
-    const today = new Date().setHours(0, 0, 0, 0);
+    const today = convertToIST(new Date()).toISOString().slice(0, 10);
+    const todayStart = new Date(today + "T00:00:00.000Z");
+    const todayEnd = new Date(today + "T23:59:59.999Z");
 
     try {
-        const attendance = await Attendance.findOne({ userId, date: today })
+        const attendance = await Attendance.findOne({
+            userId, date: { $gte: todayStart, $lte: todayEnd }
+        })
             .select('-createdAt -updatedAt');
 
         if (!attendance) {
@@ -159,12 +194,14 @@ exports.getAttendance = async (req, res) => {
                 totalBreakTime += breakDuration;
             }
         });
+        // console.log(`TBrak time`, totalBreakTime);
 
-        const punchOutTime = attendance.punchOut ? new Date(attendance.punchOut) : new Date();
+        const punchOutTime = attendance.punchOut ? new Date(attendance.punchOut) : convertToIST(new Date());
 
         const workDuration = Math.floor((punchOutTime - new Date(attendance.punchIn)) / (1000 * 60));
 
         const totalWorkTime = workDuration - totalBreakTime;
+        // console.log(workDuration);
 
         const result = {
             totalBreakTime,
@@ -293,13 +330,13 @@ exports.submitAttendanceEditRequest = async (req, res) => {
         const editRequest = new AttendanceEditRequest({
             userId,
             date,
-            punchIn,
-            punchOut,
+            punchIn: convertToIST(new Date(punchIn)),
+            punchOut: punchOut ? convertToIST(new Date(punchOut)) : null,
             totalWorkTime,
             totalBreakTime,
             breakTime: breakTime.map(breakEntry => ({
-                breakStart: breakEntry.breakStart,
-                breakEnd: breakEntry.breakEnd,
+                breakStart: convertToIST(new Date(breakEntry.breakStart)),
+                breakEnd: breakEntry.breakEnd ? convertToIST(new Date(breakEntry.breakEnd)) : null,
                 time: breakEntry.time
             })),
             status: 'pending',
