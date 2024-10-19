@@ -234,7 +234,7 @@ const getTodayAttendance = async (req, res) => {
         const balancedEmployees = allEmployees.filter(emp => !employeesWithAttendance.includes(emp._id.toString()));
         res.status(200).json({
             success: true,
-            count: attendanceList.length,
+            AttendanceMarcked_count: attendanceList.length,
             attendanceMarked: attendanceList,
             AttendanceNotMarcked_Count: balancedEmployees.length,
             NotMarcked_List: balancedEmployees
