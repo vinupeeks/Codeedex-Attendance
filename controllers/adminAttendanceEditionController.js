@@ -5,24 +5,34 @@ const cron = require('node-cron');
 const moment = require('moment');
 const tz = require('tz');
 
-cron.schedule('54 10 * * *', async () => {
-    try {
+const convertToIST = (date) => {
+    return new Date(date.getTime() + (5.5 * 60 * 60 * 1000));
+};
 
-        const today = new Date();
+cron.schedule('31 17 * * *', async () => {
+    try {
+        const today = convertToIST(new Date());
         today.setHours(0, 0, 0, 0);
+
+        const punchedInEmployeeIds = await Attendance.find({
+            date: { $gte: today, $lte: new Date() },
+            punchIn: { $ne: null }
+        }).distinct('userId');
+
         const absentEmployees = await Employee.find({
-            _id: {
-                $nin: await Attendance.find({ date: today }).distinct('userId')
-            }
+            _id: { $nin: punchedInEmployeeIds }
         });
 
+        console.log('Absent employees:', absentEmployees);
+
+        // Step 3: Bulk update absent employees' attendance status
         const bulkOperations = absentEmployees.map((employee) => ({
             updateOne: {
                 filter: { userId: employee._id, date: today },
                 update: {
                     $set: { status: 'Absent', punchIn: null, punchOut: null, totalWorkTime: 0 }
                 },
-                upsert: true,
+                upsert: true // Insert if no document exists for the day
             }
         }));
 
@@ -32,6 +42,7 @@ cron.schedule('54 10 * * *', async () => {
         } else {
             console.log('No absent employees found.');
         }
+
     } catch (error) {
         console.error('Error marking employees as absent:', error);
     }
@@ -205,11 +216,13 @@ const getRejectedAttendanceList = async (req, res) => {
 
 const getTodayAttendance = async (req, res) => {
     try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const today = convertToIST(new Date()).toISOString().slice(0, 10);
+        const todayStart = new Date(today + "T00:00:00.000Z");
+        const todayEnd = new Date(today + "T23:59:59.999Z");
+        // today.setHours(0, 0, 0, 0);
 
         const attendanceList = await Attendance.find({
-            date: today.toISOString()
+            date: { $gte: todayStart, $lte: todayEnd }
         }).populate('userId', 'name')
             .select(`date punchIn punchOut status`)
             .select(`-createdAt -updatedAt`)
@@ -259,7 +272,8 @@ const getAttendanceByAttendanceId = async (req, res) => {
     try {
         const attendanceId = req.params.id;
         const attendanceRecords = await Attendance.find({ _id: attendanceId })
-            .populate('userId', 'name email role');
+            .populate('userId', 'name email role')
+            .select(`-createdAt -updatedAt`);
 
         if (!attendanceRecords || attendanceRecords.length === 0) {
             return res.status(404).json({
@@ -293,7 +307,7 @@ const getAttendanceForCurrentMonth = async (req, res) => {
                 path: 'userId',
                 select: 'employeeCode email username', // Populate only the code and email fields
             })
-            .select(`date totalWorkTime totalBreakTime status`)
+            .select(`date totalWorkTime totalBreakTime status _id`)
             .sort({ date: -1 });
 
         const formattedAttendance = attendanceRecords.map(record => {
@@ -307,7 +321,8 @@ const getAttendanceForCurrentMonth = async (req, res) => {
                     date: record.date,
                     totalWorkTime: record.totalWorkTime,
                     totalBreakTime: record.totalBreakTime,
-                    status: record.status
+                    status: record.status,
+                    Work_iD: record._id
                 };
             } else {
                 return {
@@ -339,7 +354,7 @@ const getAttendanceForCurrentMonth = async (req, res) => {
 };
 
 const filterAttendance = async (req, res) => {
-    const { employeeCode, workMode, month, Date } = req.body;
+    const { employeeCode, workMode, month, Date, year } = req.body;
 
     try {
         let startDate, endDate;
@@ -358,12 +373,17 @@ const filterAttendance = async (req, res) => {
 
         // If the user provides a month filter, adjust the date range accordingly
         if (month) {
-            const year = moment().year(); // Use the current year
+            // const year = moment().year(); // Use the current year
             const monthIndex = parseInt(month) - 1; // Convert month to zero-based index
             startDate = moment.utc().year(year).month(monthIndex).startOf('month').toDate();
             endDate = moment.utc().year(year).month(monthIndex).endOf('month').toDate();
         }
 
+
+        if (year && !month) {
+            startDate = moment.utc().year(year).startOf('year').toDate();
+            endDate = moment.utc().year(year).endOf('year').toDate();
+        }
 
         // Initialize the attendance query with the date range
         const attendanceQuery = {
@@ -388,18 +408,20 @@ const filterAttendance = async (req, res) => {
         // Fetch filtered employees based on the query
         const filteredEmployees = await Employee.find(employeeQuery).select('_id');
 
+        // console.log(filteredEmployees);
         // If employees are found, apply their IDs to the attendance query
         if (filteredEmployees.length > 0) {
             attendanceQuery.userId = { $in: filteredEmployees.map(emp => emp._id) };
         }
 
-        console.log(attendanceQuery);
+        console.log(`yes`, attendanceQuery);
         const attendanceRecords = await Attendance.find(attendanceQuery)
             .populate({
                 path: 'userId',
                 select: 'name email workMode employeeCode',
             })
-            .select('date totalWorkTime totalBreakTime status')
+            .select('date totalWorkTime totalBreakTime status _id')
+            .select(`-createdAt -updatedAt`)
             .sort({ date: -1 });
 
         const formattedAttendance = attendanceRecords.map(record => ({
@@ -413,6 +435,7 @@ const filterAttendance = async (req, res) => {
             totalWorkTime: record.totalWorkTime,
             totalBreakTime: record.totalBreakTime,
             status: record.status,
+            Work_iD: record._id
         }));
 
         // Send success response
