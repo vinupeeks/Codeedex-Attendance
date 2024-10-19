@@ -223,14 +223,21 @@ const getTodayAttendance = async (req, res) => {
 
         const attendanceList = await Attendance.find({
             date: { $gte: todayStart, $lte: todayEnd }
-        }).populate('userId', 'name')
+        }).populate('userId', 'username employeeCode')
             .select(`date punchIn punchOut status`)
             .select(`-createdAt -updatedAt`)
 
+
+        const allEmployees = await Employee.find().select('employeeCode username');
+        const employeesWithAttendance = attendanceList.map(att => att.userId._id.toString());
+
+        const balancedEmployees = allEmployees.filter(emp => !employeesWithAttendance.includes(emp._id.toString()));
         res.status(200).json({
             success: true,
             count: attendanceList.length,
-            data: attendanceList
+            attendanceMarked: attendanceList,
+            AttendanceNotMarcked_Count: balancedEmployees.length,
+            NotMarcked_List: balancedEmployees
         });
     } catch (error) {
         res.status(500).json({
