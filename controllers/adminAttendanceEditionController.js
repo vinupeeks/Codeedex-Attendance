@@ -9,7 +9,7 @@ const convertToIST = (date) => {
     return new Date(date.getTime() + (5.5 * 60 * 60 * 1000));
 };
 
-cron.schedule('31 17 * * *', async () => {
+cron.schedule('47 12 * * *', async () => {
     try {
         const today = convertToIST(new Date());
         today.setHours(0, 0, 0, 0);
@@ -224,20 +224,44 @@ const getTodayAttendance = async (req, res) => {
         const attendanceList = await Attendance.find({
             date: { $gte: todayStart, $lte: todayEnd }
         }).populate('userId', 'username employeeCode')
-            .select(`date punchIn punchOut status`)
+            .select(`date punchIn punchOut status _id`)
             .select(`-createdAt -updatedAt`)
 
+        const attendanceMarked = attendanceList.map((emp) => ({
+            EMP_id: emp.userId._id,
+            employeeCode: emp.userId.employeeCode,
+            username: emp.userId.username,
+            status: emp.status,
+            WRK_id:emp._id
+        }));
 
-        const allEmployees = await Employee.find().select('employeeCode username');
+        const allEmployees = await Employee.find().select('username employeeCode');
+
         const employeesWithAttendance = attendanceList.map(att => att.userId._id.toString());
 
-        const balancedEmployees = allEmployees.filter(emp => !employeesWithAttendance.includes(emp._id.toString()));
+        const NotMarcked_List = allEmployees
+            .filter(emp => !employeesWithAttendance.includes(emp._id.toString()))
+            .map(emp => ({
+                EMP_id: emp._id,
+                employeeCode: emp.employeeCode,
+                username: emp.username,
+                Status: 'Not Marked',
+                // WRK_id:emp._id
+            }));
+
+        const allCombinedEmployees = [
+            ...attendanceMarked,
+            ...NotMarcked_List
+        ];
+
         res.status(200).json({
             success: true,
-            AttendanceMarcked_count: attendanceList.length,
-            attendanceMarked: attendanceList,
-            AttendanceNotMarcked_Count: balancedEmployees.length,
-            NotMarcked_List: balancedEmployees
+            Employees_Count: allCombinedEmployees.length,
+            AttendanceMarcked_count: attendanceMarked.length,
+            attendanceMarked,
+            AttendanceNotMarcked_Count: NotMarcked_List.length,
+            NotMarcked_List
+
         });
     } catch (error) {
         res.status(500).json({
@@ -285,7 +309,7 @@ const getAttendanceByAttendanceId = async (req, res) => {
         if (!attendanceRecords || attendanceRecords.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: 'No attendance records found for this employee.'
+                message: 'No attendance records found of this Id.'
             });
         }
 
@@ -297,7 +321,7 @@ const getAttendanceByAttendanceId = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: 'Error fetching attendance for the employee',
+            message: 'Error fetching attendance details..!',
             error: error.message
         });
     }
