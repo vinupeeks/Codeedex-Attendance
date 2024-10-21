@@ -40,6 +40,8 @@ exports.getPendingLeaves = async (req, res) => {
 };
 
 exports.getLeaveById = async (req, res) => {
+    console.log(`working`);
+    
     try {
         const leaveId = req.params.id;
 
@@ -69,10 +71,12 @@ exports.getLeaveById = async (req, res) => {
 
 // Admin fetches approved leave requests
 exports.getApprovedLeaves = async (req, res) => {
+    console.log(`leaves`);
     try {
         const leaves = await Leave.find({ status: 'Approved' })
-            .populate('userId', 'username employeeCode')
-            .select(`-createdAt -updatedAt -userId`);;
+        // .populate('userId', 'username employeeCode')
+        // .select(`-createdAt -updatedAt -userId`);
+
         res.status(200).json({
             success: true,
             count: leaves.length,

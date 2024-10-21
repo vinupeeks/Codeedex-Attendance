@@ -385,7 +385,7 @@ const getAttendanceForCurrentMonth = async (req, res) => {
 };
 
 const filterAttendance = async (req, res) => {
-    const { employeeCode, workMode, month, Date, year } = req.body;
+    const { employeeCode, workMode, month, Date, year, designation } = req.body;
 
     try {
         let startDate, endDate;
@@ -423,20 +423,23 @@ const filterAttendance = async (req, res) => {
         if (workMode) {
             employeeQuery.workMode = workMode;
         }
+        if (designation) {
+            const designationObjectId = mongoose.Types.ObjectId(designation);
+            employeeQuery.designation = designationObjectId;
+        }
 
         const filteredEmployees = await Employee.find(employeeQuery).select('_id');
 
-        // console.log(filteredEmployees);
-        // If employees are found, apply their IDs to the attendance query
         if (filteredEmployees.length > 0) {
             attendanceQuery.userId = { $in: filteredEmployees.map(emp => emp._id) };
         }
 
-        console.log(`yes`, attendanceQuery);
+        // console.log(`yes`, attendanceQuery);
         const attendanceRecords = await Attendance.find(attendanceQuery)
             .populate({
                 path: 'userId',
-                select: 'name email workMode employeeCode',
+                select: 'name email workMode employeeCode designation',
+                populate: { path: 'designation', select: 'title' }
             })
             .select('date totalWorkTime totalBreakTime status _id')
             .select(`-createdAt -updatedAt`)
@@ -448,6 +451,7 @@ const filterAttendance = async (req, res) => {
                 email: record.userId.email,
                 EmployeeCode: record.userId.employeeCode,
                 workMode: record.userId.workMode,
+                designation: record.userId.designation ? record.userId.designation.title : 'No designation',
             },
             date: record.date,
             totalWorkTime: record.totalWorkTime,
@@ -484,7 +488,7 @@ const getYesterdayAttendance = async (req, res) => {
         const today = new Date();
 
         const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1); 
+        yesterday.setDate(today.getDate() - 1);
 
         const startOfYesterday = new Date(Date.UTC(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0));
         const endOfYesterday = new Date(Date.UTC(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999));
@@ -498,33 +502,33 @@ const getYesterdayAttendance = async (req, res) => {
                 userId: employee._id,
                 date: { $gte: startOfYesterday, $lte: endOfYesterday }
             });
- 
+
             const employeeData = {
                 name: employee.name,
                 email: employee.email,
                 employeeCode: employee.employeeCode,
-                designation: employee.designation?.title || 'No designation' 
+                designation: employee.designation?.title || 'No designation'
             };
- 
-            if (attendanceRecord) { 
+
+            if (attendanceRecord) {
                 results.push({
                     employee: employeeData,
                     attendance: {
                         date: attendanceRecord.date.toISOString().slice(0, 10),
-                        status: attendanceRecord.status  
+                        status: attendanceRecord.status
                     }
                 });
-            } else { 
+            } else {
                 results.push({
                     employee: employeeData,
                     attendance: {
                         date: startOfYesterday.toISOString().slice(0, 10),
-                        status: 'Not marked' 
+                        status: 'Not marked'
                     }
                 });
             }
         }
- 
+
         res.status(200).json(results);
     } catch (error) {
         console.error('Error fetching yesterday\'s attendance:', error);
