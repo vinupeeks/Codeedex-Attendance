@@ -336,7 +336,7 @@ const getAttendanceForCurrentMonth = async (req, res) => {
         })
             .populate({
                 path: 'userId',
-                select: 'employeeCode email username', // Populate only the code and email fields
+                select: 'employeeCode email username',
             })
             .select(`date totalWorkTime totalBreakTime status _id`)
             .sort({ date: -1 });
@@ -389,23 +389,17 @@ const filterAttendance = async (req, res) => {
 
     try {
         let startDate, endDate;
-        // console.log(`employeeName: ${employeeName}, workMode: ${workMode}, month: ${month}, Date: ${Date}`);
-
-        // Handle specific date filtering (convert to UTC)
         if (Date) {
             startDate = moment.utc(Date).startOf('day').toDate();
             endDate = moment.utc(Date).endOf('day').toDate();
         } else {
-            // Default to last month's data if no date is provided (convert to UTC)
             const lastMonth = moment.utc().subtract(1, 'month');
             startDate = lastMonth.startOf('month').toDate();
             endDate = lastMonth.endOf('month').toDate();
         }
 
-        // If the user provides a month filter, adjust the date range accordingly
         if (month) {
-            // const year = moment().year(); // Use the current year
-            const monthIndex = parseInt(month) - 1; // Convert month to zero-based index
+            const monthIndex = parseInt(month) - 1;
             startDate = moment.utc().year(year).month(monthIndex).startOf('month').toDate();
             endDate = moment.utc().year(year).month(monthIndex).endOf('month').toDate();
         }
@@ -416,27 +410,20 @@ const filterAttendance = async (req, res) => {
             endDate = moment.utc().year(year).endOf('year').toDate();
         }
 
-        // Initialize the attendance query with the date range
         const attendanceQuery = {
             date: { $gte: startDate, $lte: endDate },
         };
 
-        // Build the employee query based on the filters
         const employeeQuery = {};
 
-        // Handle employee name filtering (case-insensitive)
         if (employeeCode) {
-            employeeQuery.employeeCode = employeeCode; // Filter by employeeCode
+            employeeQuery.employeeCode = employeeCode;
         }
 
-        // Handle workMode filtering
         if (workMode) {
             employeeQuery.workMode = workMode;
         }
 
-        // console.log(employeeQuery);
-
-        // Fetch filtered employees based on the query
         const filteredEmployees = await Employee.find(employeeQuery).select('_id');
 
         // console.log(filteredEmployees);
@@ -469,7 +456,6 @@ const filterAttendance = async (req, res) => {
             Work_iD: record._id
         }));
 
-        // Send success response
         if (formattedAttendance.length === 0) {
             return res.status(200).json({
                 success: true,
@@ -485,12 +471,64 @@ const filterAttendance = async (req, res) => {
         });
 
     } catch (error) {
-        // Handle errors
         res.status(500).json({
             success: false,
             message: 'Error fetching attendance data, Not matched fields..!',
             error: error.message,
         });
+    }
+};
+
+const getYesterdayAttendance = async (req, res) => {
+    try {
+        const today = new Date();
+
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1); 
+
+        const startOfYesterday = new Date(Date.UTC(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0));
+        const endOfYesterday = new Date(Date.UTC(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999));
+
+        const employees = await Employee.find({}).populate('designation', 'title');
+
+        let results = [];
+
+        for (const employee of employees) {
+            const attendanceRecord = await Attendance.findOne({
+                userId: employee._id,
+                date: { $gte: startOfYesterday, $lte: endOfYesterday }
+            });
+ 
+            const employeeData = {
+                name: employee.name,
+                email: employee.email,
+                employeeCode: employee.employeeCode,
+                designation: employee.designation?.title || 'No designation' 
+            };
+ 
+            if (attendanceRecord) { 
+                results.push({
+                    employee: employeeData,
+                    attendance: {
+                        date: attendanceRecord.date.toISOString().slice(0, 10),
+                        status: attendanceRecord.status  
+                    }
+                });
+            } else { 
+                results.push({
+                    employee: employeeData,
+                    attendance: {
+                        date: startOfYesterday.toISOString().slice(0, 10),
+                        status: 'Not marked' 
+                    }
+                });
+            }
+        }
+ 
+        res.status(200).json(results);
+    } catch (error) {
+        console.error('Error fetching yesterday\'s attendance:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 };
 
@@ -505,5 +543,6 @@ module.exports = {
     getAttendanceByUserId,
     getAttendanceByAttendanceId,
     getAttendanceForCurrentMonth,
-    filterAttendance
+    filterAttendance,
+    getYesterdayAttendance
 };

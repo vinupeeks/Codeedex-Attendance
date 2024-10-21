@@ -1,5 +1,5 @@
 const express = require('express');
-const { updateAttendanceByDate, getAttendanceEditRequestByDetails, getAttendanceRequestList, getProceedAttendanceList, getRejectedAttendanceList, getTodayAttendance, getAttendanceByUserId, getAttendanceByAttendanceId, getAttendanceForCurrentMonth, filterAttendance } = require('../controllers/adminAttendanceEditionController');
+const { updateAttendanceByDate, getAttendanceEditRequestByDetails, getAttendanceRequestList, getProceedAttendanceList, getRejectedAttendanceList, getTodayAttendance, getAttendanceByUserId, getAttendanceByAttendanceId, getAttendanceForCurrentMonth, filterAttendance, getYesterdayAttendance } = require('../controllers/adminAttendanceEditionController');
 const { protect, admin } = require('../middleware/authMiddleware');
 const router = express.Router();
 
@@ -24,6 +24,6 @@ router.get('/list-today', protect, admin, getTodayAttendance);
 
 router.get('/user/:id', protect, admin, getAttendanceByUserId);
 
-
+router.get('/yesterday', getYesterdayAttendance);
 
 module.exports = router;
