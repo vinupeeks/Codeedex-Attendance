@@ -383,9 +383,8 @@ const getAttendanceForCurrentMonth = async (req, res) => {
         });
     }
 };
-
 const filterAttendance = async (req, res) => {
-    const { employeeCode, workMode, month, Date, year, designation } = req.body;
+    const { employeeCode, workMode, month, Date, year, designation } = req.body; // Add designation here
 
     try {
         let startDate, endDate;
@@ -403,7 +402,6 @@ const filterAttendance = async (req, res) => {
             startDate = moment.utc().year(year).month(monthIndex).startOf('month').toDate();
             endDate = moment.utc().year(year).month(monthIndex).endOf('month').toDate();
         }
-
 
         if (year && !month) {
             startDate = moment.utc().year(year).startOf('year').toDate();
@@ -423,18 +421,19 @@ const filterAttendance = async (req, res) => {
         if (workMode) {
             employeeQuery.workMode = workMode;
         }
+
+        // Add designation filter
         if (designation) {
-            const designationObjectId = mongoose.Types.ObjectId(designation);
-            employeeQuery.designation = designationObjectId;
+            employeeQuery.designation = designation; // This assumes designation is stored as a string in the Employee model
         }
 
-        const filteredEmployees = await Employee.find(employeeQuery).select('_id');
+        const filteredEmployees = await Employee.find(employeeQuery).select('_id').populate(`designation`, `title`);
 
+        // If employees are found, apply their IDs to the attendance query
         if (filteredEmployees.length > 0) {
             attendanceQuery.userId = { $in: filteredEmployees.map(emp => emp._id) };
         }
 
-        // console.log(`yes`, attendanceQuery);
         const attendanceRecords = await Attendance.find(attendanceQuery)
             .populate({
                 path: 'userId',
@@ -451,20 +450,20 @@ const filterAttendance = async (req, res) => {
                 email: record.userId.email,
                 EmployeeCode: record.userId.employeeCode,
                 workMode: record.userId.workMode,
-                designation: record.userId.designation ? record.userId.designation.title : 'No designation',
+                designation: record.userId.designation?.title, // Include designation in the output
             },
             date: record.date,
             totalWorkTime: record.totalWorkTime,
             totalBreakTime: record.totalBreakTime,
             status: record.status,
-            Work_iD: record._id
+            Work_iD: record._id,
         }));
 
         if (formattedAttendance.length === 0) {
             return res.status(200).json({
                 success: true,
-                message: 'No matched fields..!',
-                data: []
+                message: 'No matched fields..! ',
+                data: [],
             });
         }
 
@@ -477,11 +476,12 @@ const filterAttendance = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: 'Error fetching attendance data, Not matched fields..!',
+            message: 'Error fetching attendance data, Not matched fields..! ',
             error: error.message,
         });
     }
 };
+
 
 const getYesterdayAttendance = async (req, res) => {
     try {

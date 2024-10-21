@@ -1,20 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const LeaveController = require('../controllers/leaveAdminController.js');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, admin } = require('../middleware/authMiddleware');
 
-router.get('/all-leaves', protect, LeaveController.getAllLeaveRequests);
+router.get('/all-leaves', protect, admin, LeaveController.getAllLeaveRequests);
 
-router.get('/pending', protect, LeaveController.getPendingLeaves);
+router.get('/pending', protect, admin, LeaveController.getPendingLeaves);
 
-router.get('/approved-leaves', LeaveController.getApprovedLeaves);
+router.get('/approved-leaves', protect, admin, LeaveController.getApprovedLeaves);
 
-router.get('/rejected-leaves', protect, LeaveController.getRejectedLeaves);
+router.get('/rejected-leaves', protect, admin, LeaveController.getRejectedLeaves);
 
-router.get('/:id', protect, LeaveController.getLeaveById);
+router.get('/:id', protect, admin, LeaveController.getLeaveById);
 
-router.put('/approve-leave/:leaveId', protect, LeaveController.approveLeave);
+router.put('/approve-leave/:leaveId', protect, admin, LeaveController.approveLeave);
 
-router.put('/reject-leave/:leaveId', protect, LeaveController.rejectLeave);
+router.put('/reject-leave/:leaveId', protect, admin, LeaveController.rejectLeave);
 
 module.exports = router;
