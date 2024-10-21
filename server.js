@@ -8,6 +8,7 @@ const adminWorksRoutes = require('./routes/adminWorksRoutes.js');
 const UserProfile = require('./routes/userProfileRoutes.js');
 const UserWorks = require('./routes/userWorksRoutes.js');
 const AdminAttendance = require('./routes/adminAttendanceEditionRoutes.js');
+const AdminAbsence = require(`./routes/adminAbsenceRoutes.js`)
 const attendanceRoutes = require('./routes/attendanceRoutes.js');
 
 const UserLeaves = require('./routes/leaveUserRoutes.js');
@@ -32,6 +33,8 @@ app.use('/admin', adminRoutes);
 app.use('/admin-works', adminWorksRoutes);
 app.use('/admin-attendance', AdminAttendance);
 app.use('/admin-leave', AdminLeaves);
+
+app.use('/admin-absence', AdminAbsence);
 
 // User Routes
 app.use('/User-works', UserWorks);

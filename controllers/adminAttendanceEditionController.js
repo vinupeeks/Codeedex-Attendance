@@ -9,7 +9,7 @@ const convertToIST = (date) => {
     return new Date(date.getTime() + (5.5 * 60 * 60 * 1000));
 };
 
-cron.schedule('47 12 * * *', async () => {
+cron.schedule('37 11 * * *', async () => {
     try {
         const today = convertToIST(new Date());
         today.setHours(0, 0, 0, 0);
@@ -23,7 +23,7 @@ cron.schedule('47 12 * * *', async () => {
             _id: { $nin: punchedInEmployeeIds }
         });
 
-        console.log('Absent employees:', absentEmployees);
+        // console.log('Absent employees:', absentEmployees);
 
         // Step 3: Bulk update absent employees' attendance status
         const bulkOperations = absentEmployees.map((employee) => ({
@@ -38,13 +38,13 @@ cron.schedule('47 12 * * *', async () => {
 
         if (bulkOperations.length > 0) {
             await Attendance.bulkWrite(bulkOperations);
-            console.log(`${absentEmployees.length} employees marked as absent.`);
+            // console.log(`${absentEmployees.length} employees marked as absent.`);
         } else {
-            console.log('No absent employees found.');
+            // console.log('No absent employees found.');
         }
 
     } catch (error) {
-        console.error('Error marking employees as absent:', error);
+        // console.error('Error marking employees as absent:', error);
     }
 }, {
     scheduled: true,
@@ -232,7 +232,7 @@ const getTodayAttendance = async (req, res) => {
             employeeCode: emp.userId.employeeCode,
             username: emp.userId.username,
             status: emp.status,
-            WRK_id:emp._id
+            WRK_id: emp._id
         }));
 
         const allEmployees = await Employee.find().select('username employeeCode');

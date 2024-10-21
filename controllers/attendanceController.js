@@ -89,7 +89,7 @@ exports.punchOut = async (req, res) => {
         } else {
             attendance.status = 'Fullday';
         }
-        console.log(attendance);
+        // console.log(attendance);
         
         await attendance.save();
         res.status(200).json(attendance);
@@ -323,7 +323,7 @@ exports.getAttendanceByDateRange = async (req, res) => {
 exports.submitAttendanceEditRequest = async (req, res) => {
     const { date, punchIn, punchOut, breakTime, totalWorkTime, totalBreakTime } = req.body;
     const userId = req.user._id;
-    console.log(userId)
+    // console.log(userId)
 
     try {
         // Create a new edit request
