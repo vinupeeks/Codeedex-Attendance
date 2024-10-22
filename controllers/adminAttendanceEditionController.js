@@ -9,7 +9,7 @@ const convertToIST = (date) => {
     return new Date(date.getTime() + (5.5 * 60 * 60 * 1000));
 };
 
-cron.schedule('37 11 * * *', async () => {
+cron.schedule('46 16 * * *', async () => {
     try {
         const today = convertToIST(new Date());
         today.setHours(0, 0, 0, 0);
@@ -536,6 +536,94 @@ const getYesterdayAttendance = async (req, res) => {
     }
 };
 
+const getAttendanceSummary = async (req, res) => {
+    try {
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+
+        // Date ranges for today
+        const startOfToday = new Date(today.setHours(0, 0, 0, 0));
+        const endOfToday = new Date(today.setHours(23, 59, 59, 999));
+
+        // Date ranges for yesterday
+        const startOfYesterday = new Date(yesterday.setHours(0, 0, 0, 0));
+        const endOfYesterday = new Date(yesterday.setHours(23, 59, 59, 999));
+
+        // Current month
+        const startOfCurrentMonth = moment().startOf('month').toDate();
+        const endOfCurrentMonth = moment().endOf('month').toDate();
+
+        // Last month
+        const startOfLastMonth = moment().subtract(1, 'month').startOf('month').toDate();
+        const endOfLastMonth = moment().subtract(1, 'month').endOf('month').toDate();
+
+        // Fetch today's attendance
+        const todayAttendance = await Attendance.find({
+            date: { $gte: startOfToday, $lte: endOfToday }
+        });
+
+        // Fetch yesterday's attendance
+        const yesterdayAttendance = await Attendance.find({
+            date: { $gte: startOfYesterday, $lte: endOfYesterday }
+        });
+
+        // Fetch current month's attendance
+        const currentMonthAttendance = await Attendance.find({
+            date: { $gte: startOfCurrentMonth, $lte: endOfCurrentMonth }
+        });
+
+        // Fetch last month's attendance
+        const lastMonthAttendance = await Attendance.find({
+            date: { $gte: startOfLastMonth, $lte: endOfLastMonth }
+        });
+
+        // Calculate today's present/absent counts
+        const todayPresentCount = todayAttendance.filter(att => att.status === 'Present').length;
+        const todayAbsentCount = todayAttendance.filter(att => att.status === 'Absent').length;
+
+        // Calculate yesterday's present/absent counts
+        const yesterdayPresentCount = yesterdayAttendance.filter(att => att.status === 'Present').length;
+        const yesterdayAbsentCount = yesterdayAttendance.filter(att => att.status === 'Absent').length;
+
+        // Calculate current month's present/absent counts
+        const currentMonthPresentCount = currentMonthAttendance.filter(att => att.status === 'Present').length;
+        const currentMonthAbsentCount = currentMonthAttendance.filter(att => att.status === 'Absent').length;
+
+        // Calculate last month's present/absent counts
+        const lastMonthPresentCount = lastMonthAttendance.filter(att => att.status === 'Present').length;
+        const lastMonthAbsentCount = lastMonthAttendance.filter(att => att.status === 'Absent').length;
+
+        res.status(200).json({
+            success: true,
+            today: {
+                presentCount: todayPresentCount,
+                absentCount: todayAbsentCount
+            },
+            yesterday: {
+                presentCount: yesterdayPresentCount,
+                absentCount: yesterdayAbsentCount
+            },
+            currentMonth: {
+                totalCount: currentMonthAttendance.length,
+                presentCount: currentMonthPresentCount,
+                absentCount: currentMonthAbsentCount
+            },
+            lastMonth: {
+                totalCount: lastMonthAttendance.length,
+                presentCount: lastMonthPresentCount,
+                absentCount: lastMonthAbsentCount
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching attendance summary',
+            error: error.message
+        });
+    }
+};
+
 
 module.exports = {
     updateAttendanceByDate,
@@ -548,5 +636,6 @@ module.exports = {
     getAttendanceByAttendanceId,
     getAttendanceForCurrentMonth,
     filterAttendance,
-    getYesterdayAttendance
+    getYesterdayAttendance,
+    getAttendanceSummary
 };
