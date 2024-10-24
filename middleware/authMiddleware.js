@@ -56,6 +56,12 @@ const loginAdmin = async (req, res) => {
 
         const token = jwt.sign(
             {
+
+
+
+
+
+                
                 id: user._id,
                 role: user.role === 'admin' ? 'admin' : 'employee', // Set role dynamically
                 username: user.username

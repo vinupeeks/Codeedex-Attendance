@@ -9,7 +9,7 @@ const convertToIST = (date) => {
     return new Date(date.getTime() + (5.5 * 60 * 60 * 1000));
 };
 
-cron.schedule('46 16 * * *', async () => {
+cron.schedule('25 17 * * *', async () => {
     try {
         const today = convertToIST(new Date());
         today.setHours(0, 0, 0, 0);
@@ -542,63 +542,64 @@ const getAttendanceSummary = async (req, res) => {
         const yesterday = new Date(today);
         yesterday.setDate(today.getDate() - 1);
 
-        // Date ranges for today
         const startOfToday = new Date(today.setHours(0, 0, 0, 0));
         const endOfToday = new Date(today.setHours(23, 59, 59, 999));
 
-        // Date ranges for yesterday
         const startOfYesterday = new Date(yesterday.setHours(0, 0, 0, 0));
         const endOfYesterday = new Date(yesterday.setHours(23, 59, 59, 999));
 
-        // Current month
         const startOfCurrentMonth = moment().startOf('month').toDate();
         const endOfCurrentMonth = moment().endOf('month').toDate();
 
-        // Last month
         const startOfLastMonth = moment().subtract(1, 'month').startOf('month').toDate();
         const endOfLastMonth = moment().subtract(1, 'month').endOf('month').toDate();
 
-        // Fetch today's attendance
         const todayAttendance = await Attendance.find({
             date: { $gte: startOfToday, $lte: endOfToday }
         });
-
-        // Fetch yesterday's attendance
         const yesterdayAttendance = await Attendance.find({
             date: { $gte: startOfYesterday, $lte: endOfYesterday }
         });
 
-        // Fetch current month's attendance
         const currentMonthAttendance = await Attendance.find({
             date: { $gte: startOfCurrentMonth, $lte: endOfCurrentMonth }
         });
 
-        // Fetch last month's attendance
         const lastMonthAttendance = await Attendance.find({
             date: { $gte: startOfLastMonth, $lte: endOfLastMonth }
         });
 
-        // Calculate today's present/absent counts
         const todayPresentCount = todayAttendance.filter(att => att.status === 'Present').length;
         const todayAbsentCount = todayAttendance.filter(att => att.status === 'Absent').length;
 
-        // Calculate yesterday's present/absent counts
         const yesterdayPresentCount = yesterdayAttendance.filter(att => att.status === 'Present').length;
         const yesterdayAbsentCount = yesterdayAttendance.filter(att => att.status === 'Absent').length;
 
-        // Calculate current month's present/absent counts
         const currentMonthPresentCount = currentMonthAttendance.filter(att => att.status === 'Present').length;
         const currentMonthAbsentCount = currentMonthAttendance.filter(att => att.status === 'Absent').length;
 
-        // Calculate last month's present/absent counts
         const lastMonthPresentCount = lastMonthAttendance.filter(att => att.status === 'Present').length;
         const lastMonthAbsentCount = lastMonthAttendance.filter(att => att.status === 'Absent').length;
+
+        const presentPercentageChangeToday = yesterdayPresentCount === 0 ? 0 :
+            ((todayPresentCount - yesterdayPresentCount) / yesterdayPresentCount) * 100;
+
+        const absentPercentageChangeToday = yesterdayAbsentCount === 0 ? 0 :
+            ((todayAbsentCount - yesterdayAbsentCount) / yesterdayAbsentCount) * 100;
+
+        const presentPercentageChangeMonth = lastMonthPresentCount === 0 ? 0 :
+            ((currentMonthPresentCount - lastMonthPresentCount) / lastMonthPresentCount) * 100;
+
+        const absentPercentageChangeMonth = lastMonthAbsentCount === 0 ? 0 :
+            ((currentMonthAbsentCount - lastMonthAbsentCount) / lastMonthAbsentCount) * 100;
 
         res.status(200).json({
             success: true,
             today: {
                 presentCount: todayPresentCount,
-                absentCount: todayAbsentCount
+                absentCount: todayAbsentCount,
+                presentPercentageChange: presentPercentageChangeToday.toFixed(2) + '%',
+                absentPercentageChange: absentPercentageChangeToday.toFixed(2) + '%',
             },
             yesterday: {
                 presentCount: yesterdayPresentCount,
@@ -607,7 +608,9 @@ const getAttendanceSummary = async (req, res) => {
             currentMonth: {
                 totalCount: currentMonthAttendance.length,
                 presentCount: currentMonthPresentCount,
-                absentCount: currentMonthAbsentCount
+                absentCount: currentMonthAbsentCount,
+                presentPercentageChange: presentPercentageChangeMonth.toFixed(2) + '%',
+                absentPercentageChange: absentPercentageChangeMonth.toFixed(2) + '%',
             },
             lastMonth: {
                 totalCount: lastMonthAttendance.length,
@@ -623,6 +626,7 @@ const getAttendanceSummary = async (req, res) => {
         });
     }
 };
+
 
 
 module.exports = {

@@ -33,7 +33,6 @@ app.use('/admin', adminRoutes);
 app.use('/admin-works', adminWorksRoutes);
 app.use('/admin-attendance', AdminAttendance);
 app.use('/admin-leave', AdminLeaves);
-
 app.use('/admin-absence', AdminAbsence);
 
 // User Routes
