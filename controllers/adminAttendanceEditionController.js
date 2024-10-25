@@ -554,12 +554,28 @@ const getAttendanceSummary = async (req, res) => {
         const startOfLastMonth = moment().subtract(1, 'month').startOf('month').toDate();
         const endOfLastMonth = moment().subtract(1, 'month').endOf('month').toDate();
 
+        // Fetch today's attendance
         const todayAttendance = await Attendance.find({
             date: { $gte: startOfToday, $lte: endOfToday }
         });
+
+        // Debugging line
+        console.log('Today Attendance:', todayAttendance);
+
+        // Fetch yesterday's attendance
         const yesterdayAttendance = await Attendance.find({
             date: { $gte: startOfYesterday, $lte: endOfYesterday }
         });
+
+        // Count attendance status with the correct filter for present statuses
+        const todayPresentCount = todayAttendance.filter(att =>
+            att.status === 'Present' || att.status === 'Halfday' || att.status === 'Fullday'
+        ).length;
+
+        const todayAbsentCount = todayAttendance.filter(att => att.status === 'Absent' || att.status === '').length;
+
+        const yesterdayPresentCount = yesterdayAttendance.filter(att => att.status === 'Present').length;
+        const yesterdayAbsentCount = yesterdayAttendance.filter(att => att.status === 'Absent').length;
 
         const currentMonthAttendance = await Attendance.find({
             date: { $gte: startOfCurrentMonth, $lte: endOfCurrentMonth }
@@ -569,18 +585,19 @@ const getAttendanceSummary = async (req, res) => {
             date: { $gte: startOfLastMonth, $lte: endOfLastMonth }
         });
 
-        const todayPresentCount = todayAttendance.filter(att => att.status === 'Present').length;
-        const todayAbsentCount = todayAttendance.filter(att => att.status === 'Absent').length;
+        const currentMonthPresentCount = currentMonthAttendance.filter(att =>
+            att.status === 'Present' || att.status === 'Halfday' || att.status === 'Fullday'
+        ).length;
 
-        const yesterdayPresentCount = yesterdayAttendance.filter(att => att.status === 'Present').length;
-        const yesterdayAbsentCount = yesterdayAttendance.filter(att => att.status === 'Absent').length;
-
-        const currentMonthPresentCount = currentMonthAttendance.filter(att => att.status === 'Present').length;
         const currentMonthAbsentCount = currentMonthAttendance.filter(att => att.status === 'Absent').length;
 
-        const lastMonthPresentCount = lastMonthAttendance.filter(att => att.status === 'Present').length;
+        const lastMonthPresentCount = lastMonthAttendance.filter(att =>
+            att.status === 'Present' || att.status === 'Halfday' || att.status === 'Fullday'
+        ).length;
+
         const lastMonthAbsentCount = lastMonthAttendance.filter(att => att.status === 'Absent').length;
 
+        // Calculate percentage changes
         const presentPercentageChangeToday = yesterdayPresentCount === 0 ? 0 :
             ((todayPresentCount - yesterdayPresentCount) / yesterdayPresentCount) * 100;
 
@@ -593,6 +610,7 @@ const getAttendanceSummary = async (req, res) => {
         const absentPercentageChangeMonth = lastMonthAbsentCount === 0 ? 0 :
             ((currentMonthAbsentCount - lastMonthAbsentCount) / lastMonthAbsentCount) * 100;
 
+        // Send response
         res.status(200).json({
             success: true,
             today: {
@@ -608,9 +626,7 @@ const getAttendanceSummary = async (req, res) => {
             currentMonth: {
                 totalCount: currentMonthAttendance.length,
                 presentCount: currentMonthPresentCount,
-                absentCount: currentMonthAbsentCount,
-                presentPercentageChange: presentPercentageChangeMonth.toFixed(2) + '%',
-                absentPercentageChange: absentPercentageChangeMonth.toFixed(2) + '%',
+                absentCount: currentMonthAbsentCount
             },
             lastMonth: {
                 totalCount: lastMonthAttendance.length,
@@ -626,6 +642,7 @@ const getAttendanceSummary = async (req, res) => {
         });
     }
 };
+
 
 
 
