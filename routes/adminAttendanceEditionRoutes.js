@@ -12,7 +12,7 @@ router.post('/request/details', protect, admin, getAttendanceEditRequestByDetail
 // 
 router.get('/list-today', protect, admin, getTodayAttendance);
 
-router.get('/requests/:id',getAttendanceEditRequestById);
+router.get('/requests/:id', protect, admin, getAttendanceEditRequestById);
 
 router.get('/proceed-list', protect, admin, getProceedAttendanceList);
 
@@ -26,8 +26,8 @@ router.post('/filter', protect, admin, filterAttendance);
 
 router.get('/user/:id', protect, admin, getAttendanceByUserId);
 
-router.get('/yesterday', getYesterdayAttendance);
+router.get('/yesterday', protect, admin, getYesterdayAttendance);
 
-router.get('/summary', getAttendanceSummary);
+router.get('/summary', protect, admin, getAttendanceSummary);
 
 module.exports = router;
