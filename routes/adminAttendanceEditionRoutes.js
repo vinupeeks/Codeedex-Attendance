@@ -10,6 +10,8 @@ router.get('/requests/list', protect, admin, getAttendanceRequestList);
 
 router.post('/request/details', protect, admin, getAttendanceEditRequestByDetails);
 // 
+router.get('/list-today', protect, admin, getTodayAttendance);
+
 router.get('/requests/:id',getAttendanceEditRequestById);
 
 router.get('/proceed-list', protect, admin, getProceedAttendanceList);
@@ -21,8 +23,6 @@ router.get('/details/:id', protect, admin, getAttendanceByAttendanceId);
 router.get('/month', protect, admin, getAttendanceForCurrentMonth);
 
 router.post('/filter', protect, admin, filterAttendance);
-
-router.get('/list-today', protect, admin, getTodayAttendance);
 
 router.get('/user/:id', protect, admin, getAttendanceByUserId);
 

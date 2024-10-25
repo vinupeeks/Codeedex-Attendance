@@ -118,7 +118,7 @@ const updateAttendanceByDate = async (req, res) => {
 const getAttendanceRequestList = async (req, res) => {
     try {
         const pendingRequests = await AttendanceEditRequest.find({ status: 'pending' })
-            .populate('userId', 'username employeeCode')
+            .populate('userId', 'username employeeCode _id')
             .sort({ date: -1 });
 
         if (!pendingRequests || pendingRequests.length === 0) {
@@ -128,7 +128,8 @@ const getAttendanceRequestList = async (req, res) => {
         const requestSummaries = pendingRequests.map(request => ({
             username: request.userId ? request.userId.username : 'Unknown User',
             employeeCode: request.userId ? request.userId.employeeCode : '',
-            date: request.date
+            date: request.date,
+            ID: request._id
         }));
 
         res.status(200).json(requestSummaries);
@@ -246,58 +247,71 @@ const getTodayAttendance = async (req, res) => {
         const today = convertToIST(new Date()).toISOString().slice(0, 10);
         const todayStart = new Date(today + "T00:00:00.000Z");
         const todayEnd = new Date(today + "T23:59:59.999Z");
-        // today.setHours(0, 0, 0, 0);
+
+        const allEmployees = await Employee.find().select('username employeeCode');
 
         const attendanceList = await Attendance.find({
             date: { $gte: todayStart, $lte: todayEnd }
         }).populate('userId', 'username employeeCode')
             .select(`date punchIn punchOut status _id`)
-            .select(`-createdAt -updatedAt`)
+            .select(`-createdAt -updatedAt`);
 
-        const attendanceMarked = attendanceList.map((emp) => ({
-            EMP_id: emp.userId._id,
-            employeeCode: emp.userId.employeeCode,
-            username: emp.userId.username,
-            status: emp.status,
-            WRK_id: emp._id
-        }));
+        const attendanceMarked = [];
+        const absentList = [];
+        const notMarkedList = [];
 
-        const allEmployees = await Employee.find().select('username employeeCode');
+        // Convert attendanceList to a map for easy lookup by employee ID
+        const attendanceMap = new Map();
+        attendanceList.forEach((att) => {
+            attendanceMap.set(att.userId._id.toString(), {
+                EMP_id: att.userId._id,
+                employeeCode: att.userId.employeeCode,
+                username: att.userId.username,
+                status: att.status,
+                WRK_id: att._id
+            });
+        });
 
-        const employeesWithAttendance = attendanceList.map(att => att.userId._id.toString());
+        allEmployees.forEach((employee) => {
+            const empIdStr = employee._id.toString();
 
-        const NotMarcked_List = allEmployees
-            .filter(emp => !employeesWithAttendance.includes(emp._id.toString()))
-            .map(emp => ({
-                EMP_id: emp._id,
-                employeeCode: emp.employeeCode,
-                username: emp.username,
-                Status: 'Not Marked',
-                // WRK_id:emp._id
-            }));
-
-        const allCombinedEmployees = [
-            ...attendanceMarked,
-            ...NotMarcked_List
-        ];
+            if (attendanceMap.has(empIdStr)) {
+                const empAttendance = attendanceMap.get(empIdStr);
+                // Check the attendance status and add to respective lists
+                if (empAttendance.status === 'Present' || empAttendance.status === 'Halfday' || empAttendance.status === 'Fullday') {
+                    attendanceMarked.push(empAttendance);
+                } else if (empAttendance.status === 'Absent' || empAttendance.status === null || empAttendance.status === '') {
+                    absentList.push(empAttendance);
+                }
+            } else {
+                // If no attendance record for today, add to Not Marked list
+                notMarkedList.push({
+                    EMP_id: employee._id,
+                    employeeCode: employee.employeeCode,
+                    username: employee.username,
+                    Status: 'Not Marked'
+                });
+            }
+        });
 
         res.status(200).json({
             success: true,
-            Employees_Count: allCombinedEmployees.length,
+            Employees_Count: allEmployees.length,
             AttendanceMarcked_count: attendanceMarked.length,
             attendanceMarked,
-            AttendanceNotMarcked_Count: NotMarcked_List.length,
-            NotMarcked_List
-
+            AttendanceNotMarcked_Count: absentList.length,
+            NotMarcked_List: absentList,
         });
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: 'Error fetching today\'s attendance',
+            message: "Error fetching today's attendance",
             error: error.message
         });
     }
 };
+
+
 
 const getAttendanceByUserId = async (req, res) => {
     try {
@@ -643,8 +657,8 @@ const getAttendanceSummary = async (req, res) => {
             today: {
                 presentCount: todayPresentCount,
                 absentCount: todayAbsentCount,
-                presentPercentageChange: presentPercentageChangeToday.toFixed(2) + '%',
-                absentPercentageChange: absentPercentageChangeToday.toFixed(2) + '%',
+                presentPercentageChange: presentPercentageChangeToday.toFixed() + '%',
+                absentPercentageChange: absentPercentageChangeToday.toFixed() + '%',
             },
             yesterday: {
                 presentCount: yesterdayPresentCount,
