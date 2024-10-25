@@ -116,11 +116,9 @@ const updateAttendanceByDate = async (req, res) => {
 }
 
 const getAttendanceRequestList = async (req, res) => {
-
     try {
         const pendingRequests = await AttendanceEditRequest.find({ status: 'pending' })
             .populate('userId', 'username employeeCode')
-            .select('userId date')
             .sort({ date: -1 });
 
         if (!pendingRequests || pendingRequests.length === 0) {
@@ -128,8 +126,8 @@ const getAttendanceRequestList = async (req, res) => {
         }
 
         const requestSummaries = pendingRequests.map(request => ({
-            username: request.userId.username,
-            EmplyCode: request.userId.employeeCode,
+            username: request.userId ? request.userId.username : 'Unknown User',
+            employeeCode: request.userId ? request.userId.employeeCode : '',
             date: request.date
         }));
 
@@ -168,7 +166,36 @@ const getAttendanceEditRequestByDetails = async (req, res) => {
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
+const getAttendanceEditRequestById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const request = await AttendanceEditRequest.findById(id)
+            .populate({
+                path: 'userId',
+                select: 'username workMode employeeCode' // Exclude password here
+            })
+            .populate('adminAction.reviewedBy')
+            .lean();
 
+        if (!request) {
+            return res.status(404).json({
+                success: false,
+                message: 'Attendance Edit Request not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            request
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching attendance edit request',
+            error: error.message
+        });
+    }
+};
 
 const getProceedAttendanceList = async (req, res) => {
 
@@ -650,6 +677,7 @@ module.exports = {
     updateAttendanceByDate,
     getAttendanceEditRequestByDetails,
     getAttendanceRequestList,
+    getAttendanceEditRequestById,
     getProceedAttendanceList,
     getRejectedAttendanceList,
     getTodayAttendance,
