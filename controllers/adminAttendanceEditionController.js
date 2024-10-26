@@ -173,9 +173,12 @@ const getAttendanceEditRequestById = async (req, res) => {
         const request = await AttendanceEditRequest.findById(id)
             .populate({
                 path: 'userId',
-                select: 'username workMode employeeCode' // Exclude password here
+                select: 'username workMode employeeCode'
             })
-            .populate('adminAction.reviewedBy')
+            .populate({
+                path: 'adminAction.reviewedBy', select: 'username adminCode email'
+            })
+            .select(`-createdAt -updatedAt `)
             .lean();
 
         if (!request) {
